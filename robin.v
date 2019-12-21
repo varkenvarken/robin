@@ -46,7 +46,7 @@ module top(
 	wire u_reset;
 	assign u_reset = ~reset; // uart reset is active high
 
-	localparam ADDR_WIDTH = 4;
+	localparam FIFO_ADDR_WIDTH = 4;
 
 	uart #(
 		.baud_rate(115200),
@@ -67,48 +67,110 @@ module top(
 		// output reg [3:0] rx_sample_countdown
 	);
 
-	reg [ADDR_WIDTH-1:0] buf_waddr, buf_raddr;
-	reg [7:0] buf_din;
-	reg buf_write_en;
-	wire [7:0] buf_dout;
+	// receiving fifo
+	reg [FIFO_ADDR_WIDTH-1:0] fifo_in_waddr, fifo_in_raddr;
+	reg [7:0] fifo_in_din;
+	reg fifo_in_write_en;
+	wire [7:0] fifo_in_dout;
+	reg fifo_in_read_en; // for reading from the non-uart side 
 
-	ram #(.addr_width(ADDR_WIDTH))
-	buffer(
-		.din		(buf_din), 
-		.write_en	(buf_write_en), 
-		.waddr		(buf_waddr), 
+	ram #(.addr_width(FIFO_ADDR_WIDTH))
+	fifo_in(
+		.din		(fifo_in_din), 
+		.write_en	(fifo_in_write_en), 
+		.waddr		(fifo_in_waddr), 
 		.wclk(CLK), 
-		.raddr		(buf_raddr), 
+		.raddr		(fifo_in_raddr), 
 		.rclk(CLK),
-		.dout		(buf_dout)
+		.dout		(fifo_in_dout)
 	);
 
-	reg [ADDR_WIDTH-1:0] next_waddr, next_raddr;
+	reg [FIFO_ADDR_WIDTH-1:0] fifo_in_next_waddr, fifo_in_next_raddr;
 
-	reg [ADDR_WIDTH-1:0] bytes_received;
-	wire bytes_received_nonzero;
-	assign bytes_received_nonzero = bytes_received != 0;
+	reg [FIFO_ADDR_WIDTH-1:0] fifo_in_bytes_received;
+	wire fifo_in_bytes_received_nonzero;
+	assign fifo_in_bytes_received_nonzero = fifo_in_bytes_received != 0;
 
 	always @(posedge CLK) begin
-		buf_waddr <= next_waddr;
-		buf_raddr <= next_raddr;
+		fifo_in_waddr <= fifo_in_next_waddr;
+		fifo_in_raddr <= fifo_in_next_raddr;
+	end
+
+	// transmitting fifo
+	reg [FIFO_ADDR_WIDTH-1:0] fifo_out_waddr, fifo_out_raddr;
+	reg [7:0] fifo_out_din;
+	reg fifo_out_write_en;
+	wire [7:0] fifo_out_dout;
+	reg fifo_out_read_en; // for WRITing from the non-uart side
+
+	ram #(.addr_width(FIFO_ADDR_WIDTH))
+	fifo_out(
+		.din		(fifo_out_din), 
+		.write_en	(fifo_out_write_en), 
+		.waddr		(fifo_out_waddr), 
+		.wclk(CLK), 
+		.raddr		(fifo_out_raddr), 
+		.rclk(CLK),
+		.dout		(fifo_out_dout)
+	);
+
+	reg [FIFO_ADDR_WIDTH-1:0] fifo_out_next_waddr, fifo_out_next_raddr;
+
+	reg [FIFO_ADDR_WIDTH-1:0] fifo_out_bytes_received;
+	wire fifo_out_bytes_received_nonzero;
+	assign fifo_out_bytes_received_nonzero = fifo_out_bytes_received != 0;
+
+	always @(posedge CLK) begin
+		fifo_out_waddr <= fifo_out_next_waddr;
+		fifo_out_raddr <= fifo_out_next_raddr;
+	end
+
+	// do something with ingoing and outgoing data
+	reg [7:0] byte;
+
+	always @(posedge CLK) begin
+		// manage incoming queue
+		fifo_in_write_en <= 0;
+		if(u_received) begin
+			fifo_in_din <= u_rx_byte;
+			fifo_in_write_en <= 1;
+			fifo_in_next_waddr <= fifo_in_waddr + 1;
+			fifo_in_bytes_received <= fifo_in_bytes_received + 1;
+		end else if(fifo_in_read_en & fifo_in_bytes_received_nonzero) begin
+			byte <= fifo_in_dout;
+			fifo_in_next_raddr <= fifo_in_raddr + 1;
+			fifo_in_bytes_received <= fifo_in_bytes_received - 1;
+		end
 	end
 
 	always @(posedge CLK) begin
-		// store incoming
-		if(u_received) begin
-			buf_din <= u_rx_byte;
-			buf_write_en <= 1;
-			next_waddr <= buf_waddr + 1;
-			bytes_received <= bytes_received + 1;
-		end
-		// transmit stored bytes
+		// manage outgoing queue
 		u_transmit <= 0;
-		if(~u_is_transmitting & bytes_received_nonzero) begin
-			u_tx_byte <= buf_dout;
+		if(~u_is_transmitting & fifo_out_bytes_received_nonzero) begin
+			u_tx_byte <= fifo_out_dout;
 			u_transmit <= 1;
-			next_raddr <= buf_raddr + 1;
-			bytes_received <= bytes_received - 1;
+			fifo_out_next_raddr <= fifo_out_raddr + 1;
+			fifo_out_bytes_received <= fifo_out_bytes_received - 1;
+		end else if(fifo_out_read_en) begin  // we store w.o check it is full right now, to be changed later
+			fifo_out_din <= byte;
+			fifo_out_write_en <= 1;
+			fifo_out_next_waddr <= fifo_out_waddr + 1;
+			fifo_out_bytes_received <= fifo_out_bytes_received + 1;
+		end
+	end
+
+	// this process reads a byte if the receive queue is not empty
+	// if a read byte is available, it stores it in the transmit queue
+	reg bytemarked = 0;
+	always @(posedge CLK) begin // should have reset signal to clear bytemarked and read signals
+		fifo_in_read_en <= 0;
+		fifo_out_read_en <= 0;
+		if(fifo_in_bytes_received_nonzero & ~bytemarked) begin
+			fifo_in_read_en <= 1;
+			bytemarked <= 1;
+		end else if(bytemarked) begin
+			fifo_out_read_en <= 1;
+			bytemarked <= 0;
 		end
 	end
 
