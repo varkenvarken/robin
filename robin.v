@@ -127,7 +127,6 @@ module top(
 
 	// do something with ingoing and outgoing data
 	reg [7:0] byte;
-
 	always @(posedge CLK) begin
 		// manage incoming queue
 		fifo_in_write_en <= 0;
@@ -136,7 +135,7 @@ module top(
 			fifo_in_write_en <= 1;
 			fifo_in_next_waddr <= fifo_in_waddr + 1;
 			fifo_in_bytes_received <= fifo_in_bytes_received + 1;
-		end else if(fifo_in_read_en & fifo_in_bytes_received_nonzero) begin
+		end else if(fifo_in_read_en & fifo_in_bytes_received_nonzero ) begin
 			byte <= fifo_in_dout;
 			fifo_in_next_raddr <= fifo_in_raddr + 1;
 			fifo_in_bytes_received <= fifo_in_bytes_received - 1;
@@ -159,18 +158,37 @@ module top(
 		end
 	end
 
-	// this process reads a byte if the receive queue is not empty
-	// if a read byte is available, it stores it in the transmit queue
+	wire button;
+	debounce main_button(CLK,BTN_N,button);
+	always @(posedge CLK) LED1 <= ~button;
+
+	// this process reads a byte if the receive queue is not empty and a button is pressed
+	// if so, it stores it in the transmit queue. 
+	// this has the effect that we can receive the number of byytes that will fit into the
+	// receive fifo and that we than echo those bytes one at a time for each keypress
 	reg bytemarked = 0;
+	reg wait_one = 0;
+	reg echo_one = 0;
+	reg button_on = 0;
+
 	always @(posedge CLK) begin // should have reset signal to clear bytemarked and read signals
 		fifo_in_read_en <= 0;
 		fifo_out_read_en <= 0;
-		if(fifo_in_bytes_received_nonzero & ~bytemarked) begin
-			fifo_in_read_en <= 1;
-			bytemarked <= 1;
-		end else if(bytemarked) begin
+		if(wait_one) begin
+			wait_one <= 0;
+		end else if(bytemarked) begin   // we have a byte available to transmit
 			fifo_out_read_en <= 1;
 			bytemarked <= 0;
+		end else if(fifo_in_bytes_received_nonzero & ~bytemarked & echo_one) begin  // read a byte only if instructed to do so
+			fifo_in_read_en <= 1;
+			bytemarked <= 1;
+			wait_one <= 1;		// we introduce a wait cycle here to prevent the blockram from not settling on a new read address. With the single button press this is overkill because we cannot press that quickly 
+			echo_one <= 0;
+		end else if(~button & ~button_on) begin // if the button is pressed and wasn't pressed already we signal to echo 1 byte
+			echo_one <= 1;
+			button_on <= 1;		// we mark this button press so only if we release it again to we process the next char
+		end else if(button) begin 
+			button_on <= 0;
 		end
 	end
 
