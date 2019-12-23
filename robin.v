@@ -108,14 +108,19 @@ module top(
 		end else if(receiving) begin
 			fifo_in_write <= 1;
 			receiving <= 0;
-		// process any bytes in the fifo. This cannot be done in parallel with writing to the fifo
+		// the commented code introduces a wait cycle for writing to the blockram.
+		// this is in fact redundant. (The blockram can be written in one cycle @12MHz)
 		end else if(wait_one) begin
 			wait_one <= 0;
-			u_transmit <= 1;
+			//u_transmit <= 1;
+		// process any bytes in the fifo.
+		// This cannot be done in parallel with writing to the fifo!
+		// Hence the if .. else if .. to make actions mutually exclusive
 		end else if(~fifo_in_empty) begin
 			u_tx_byte <= fifo_in_data_out;
 			fifo_in_read <= 1;
-			wait_one <= 1;		//  we introduce a wait cycle here to prevent the blockram from not settling on a new read address. With the single button press this is overkill because we cannot press that quickly 
+			//wait_one <= 1;
+			u_transmit <= 1;
 		end
 	end
 
