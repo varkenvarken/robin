@@ -32,10 +32,6 @@ module top(
 	output reg LEDR_N,
 	output reg LEDG_N);
 
-	// global reset active low, cleared after startup
-	reg reset = 0;
-	always @(posedge CLK) reset <= 1;
-
 	// uart wires
 	wire u_reset = 0;
 	reg [7:0] u_tx_byte;
@@ -46,8 +42,13 @@ module top(
 	wire u_reset;
 	assign u_reset = ~reset; // uart reset is active high
 
-	localparam FIFO_ADDR_WIDTH = 4;
+	// global reset active low, cleared after startup
+	reg reset = 0;
+	always @(posedge CLK) reset <= 1;    // replace later with for example ~u_error to reset on break or on some button press
 
+	localparam FIFO_ADDR_WIDTH = 4; // we could go to 9 gving us buffers of 2⁹ == 512 bytes
+
+	// the UART config. baudrate hardcoded.
 	uart #(
 		.baud_rate(115200),
 		.sys_clk_freq(12000000)
@@ -67,129 +68,60 @@ module top(
 		// output reg [3:0] rx_sample_countdown
 	);
 
+	always @(posedge CLK)
+	begin
+		LEDR_N <= ~u_error;
+	end
+
 	// receiving fifo
-	reg [FIFO_ADDR_WIDTH-1:0] fifo_in_waddr, fifo_in_raddr;
-	reg [7:0] fifo_in_din;
-	reg fifo_in_write_en;
-	wire [7:0] fifo_in_dout;
-	reg fifo_in_read_en; // for reading from the non-uart side 
+	reg fifo_in_read, fifo_in_write;
+	reg [7:0] fifo_in_data_in;
+	wire [7:0] fifo_in_data_out;
+	wire fifo_in_full;
+	wire fifo_in_empty;
 
-	ram #(.addr_width(FIFO_ADDR_WIDTH))
+	fifo #(.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH)) 
 	fifo_in(
-		.din		(fifo_in_din), 
-		.write_en	(fifo_in_write_en), 
-		.waddr		(fifo_in_waddr), 
-		.wclk(CLK), 
-		.raddr		(fifo_in_raddr), 
-		.rclk(CLK),
-		.dout		(fifo_in_dout)
+		.clk(CLK),
+		.reset_n(reset),
+		.fifo_write(fifo_in_write),
+		.fifo_data_in(fifo_in_data_in),
+		.fifo_read(fifo_in_read),
+		.fifo_data_out(fifo_in_data_out),
+		.full(fifo_in_full),
+		.empty(fifo_in_empty)
 	);
 
-	reg [FIFO_ADDR_WIDTH-1:0] fifo_in_next_waddr, fifo_in_next_raddr;
-
-	reg [FIFO_ADDR_WIDTH-1:0] fifo_in_bytes_received;
-	wire fifo_in_bytes_received_nonzero;
-	assign fifo_in_bytes_received_nonzero = fifo_in_bytes_received != 0;
-
-	always @(posedge CLK) begin
-		fifo_in_waddr <= fifo_in_next_waddr;
-		fifo_in_raddr <= fifo_in_next_raddr;
-	end
-
-	// transmitting fifo
-	reg [FIFO_ADDR_WIDTH-1:0] fifo_out_waddr, fifo_out_raddr;
-	reg [7:0] fifo_out_din;
-	reg fifo_out_write_en;
-	wire [7:0] fifo_out_dout;
-	reg fifo_out_read_en; // for WRITing from the non-uart side
-
-	ram #(.addr_width(FIFO_ADDR_WIDTH))
-	fifo_out(
-		.din		(fifo_out_din), 
-		.write_en	(fifo_out_write_en), 
-		.waddr		(fifo_out_waddr), 
-		.wclk(CLK), 
-		.raddr		(fifo_out_raddr), 
-		.rclk(CLK),
-		.dout		(fifo_out_dout)
-	);
-
-	reg [FIFO_ADDR_WIDTH-1:0] fifo_out_next_waddr, fifo_out_next_raddr;
-
-	reg [FIFO_ADDR_WIDTH-1:0] fifo_out_bytes_received;
-	wire fifo_out_bytes_received_nonzero;
-	assign fifo_out_bytes_received_nonzero = fifo_out_bytes_received != 0;
-
-	always @(posedge CLK) begin
-		fifo_out_waddr <= fifo_out_next_waddr;
-		fifo_out_raddr <= fifo_out_next_raddr;
-	end
-
-	// do something with ingoing and outgoing data
-	reg [7:0] byte;
-	always @(posedge CLK) begin
-		// manage incoming queue
-		fifo_in_write_en <= 0;
-		if(u_received) begin
-			fifo_in_din <= u_rx_byte;
-			fifo_in_write_en <= 1;
-			fifo_in_next_waddr <= fifo_in_waddr + 1;
-			fifo_in_bytes_received <= fifo_in_bytes_received + 1;
-		end else if(fifo_in_read_en & fifo_in_bytes_received_nonzero ) begin
-			byte <= fifo_in_dout;
-			fifo_in_next_raddr <= fifo_in_raddr + 1;
-			fifo_in_bytes_received <= fifo_in_bytes_received - 1;
-		end
-	end
-
-	always @(posedge CLK) begin
-		// manage outgoing queue
-		u_transmit <= 0;
-		if(~u_is_transmitting & fifo_out_bytes_received_nonzero) begin
-			u_tx_byte <= fifo_out_dout;
-			u_transmit <= 1;
-			fifo_out_next_raddr <= fifo_out_raddr + 1;
-			fifo_out_bytes_received <= fifo_out_bytes_received - 1;
-		end else if(fifo_out_read_en) begin  // we store w.o check it is full right now, to be changed later
-			fifo_out_din <= byte;
-			fifo_out_write_en <= 1;
-			fifo_out_next_waddr <= fifo_out_waddr + 1;
-			fifo_out_bytes_received <= fifo_out_bytes_received + 1;
-		end
-	end
-
-	wire button;
-	debounce main_button(CLK,BTN_N,button);
-	always @(posedge CLK) LED1 <= ~button;
-
-	// this process reads a byte if the receive queue is not empty and a button is pressed
-	// if so, it stores it in the transmit queue. 
-	// this has the effect that we can receive the number of byytes that will fit into the
-	// receive fifo and that we than echo those bytes one at a time for each keypress
-	reg bytemarked = 0;
+	reg receiving = 0;
 	reg wait_one = 0;
 	reg echo_one = 0;
-	reg button_on = 0;
-
-	always @(posedge CLK) begin // should have reset signal to clear bytemarked and read signals
-		fifo_in_read_en <= 0;
-		fifo_out_read_en <= 0;
-		if(wait_one) begin
+	always @(posedge CLK) begin
+		fifo_in_write <= 0;
+		fifo_in_read <= 0;
+		u_transmit <= 0;
+		// transfer incoming bytes to the fifo
+		if(~reset) begin
+			receiving <= 0;
+		end else if(u_received & ~receiving) begin
+			fifo_in_data_in <= u_rx_byte;
+			receiving <= 1;
+		end else if(receiving) begin
+			fifo_in_write <= 1;
+			receiving <= 0;
+		// process any bytes in the fifo. This cannot be done in parallel with writing to the fifo
+		end else if(wait_one) begin
 			wait_one <= 0;
-		end else if(bytemarked) begin   // we have a byte available to transmit
-			fifo_out_read_en <= 1;
-			bytemarked <= 0;
-		end else if(fifo_in_bytes_received_nonzero & ~bytemarked & echo_one) begin  // read a byte only if instructed to do so
-			fifo_in_read_en <= 1;
-			bytemarked <= 1;
-			wait_one <= 1;		// we introduce a wait cycle here to prevent the blockram from not settling on a new read address. With the single button press this is overkill because we cannot press that quickly 
-			echo_one <= 0;
-		end else if(~button & ~button_on) begin // if the button is pressed and wasn't pressed already we signal to echo 1 byte
-			echo_one <= 1;
-			button_on <= 1;		// we mark this button press so only if we release it again to we process the next char
-		end else if(button) begin 
-			button_on <= 0;
+			u_transmit <= 1;
+		end else if(~fifo_in_empty) begin
+			u_tx_byte <= fifo_in_data_out;
+			fifo_in_read <= 1;
+			wait_one <= 1;		//  we introduce a wait cycle here to prevent the blockram from not settling on a new read address. With the single button press this is overkill because we cannot press that quickly 
 		end
 	end
+
+	// main iCEbreaker button
+	wire button;
+	debounce main_button(CLK,BTN_N,button);
+	always @(posedge CLK) LEDG_N <= button;
 
 endmodule
