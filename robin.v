@@ -44,10 +44,11 @@ module top(
 
 	// global reset active low, cleared after startup
 	reg reset = 0;
-	always @(posedge CLK) reset <= 1;    // replace later with for example ~u_error to reset on break or on some button press
+	always @(posedge CLK) reset <= 1;	// replace later with for example ~u_error to reset on break or on some button press
 
-	localparam FIFO_ADDR_WIDTH = 4; // we could go to 9 gving us buffers of 2⁹ == 512 bytes
-	localparam LOWMEM_ADDR_WIDTH = 13; // this gives us of 2¹³ == 8K bytes
+	localparam FIFO_ADDR_WIDTH = 4;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
+	localparam LOWMEM_ADDR_WIDTH = 13;	// this gives us of 2¹³ == 8K bytes
+	localparam DUMPWAIT = 16'hfff;		// additional wait time between sending chars (approx. .3 milliseconds) because u_is_transmitting not reliable)
 
 	// the UART config. baudrate hardcoded.
 	uart #(
@@ -132,6 +133,9 @@ module top(
 	//		01 <addr> <len> <byte ...>
 	// dump: show bytes in blockram
 	//		02 <addr> <len>
+	// TODO
+	// exec: run program and load word into lower two bytes of memory
+	//		03 <addr> <word>
 
 	// monitor state, reflected in the green leds for debugging
 	reg [3:0] state = FLUSH;
@@ -160,9 +164,11 @@ module top(
 	localparam LOAD0   = 4'd8;
 	localparam LOAD1   = 4'd9;
 	localparam LOAD2   = 4'd10;
+	localparam EXEC0   = 4'd11;
+	localparam EXEC1   = 4'd12;
+	localparam EXEC2   = 4'd13;
 
 	reg [7:0] tmp;
-	//reg waitcycle;
 	reg [15:0] counter;
 	always @(posedge CLK) begin
 		fifo_in_read <= 0;
@@ -200,14 +206,19 @@ module top(
 			PREP:	begin
 						addr = {bytes[2],bytes[3]};
 						len  = {bytes[4],bytes[5]};
-						state <= bytes[0][0] ? LOAD0: DUMP0;
+						case(bytes[0][1:0])
+							1	: state <= LOAD0;
+							2	: state <= DUMP0;
+							3	: state <= EXEC0;
+							default: state <= FLUSH;
+						endcase
 					end
 			DUMP0:	begin
 						if(len) begin
 							mem_raddr <= addr;
 							len <= len - 1;
 							addr <= addr + 1;
-							counter <= 16'hfff;
+							counter <= DUMPWAIT;
 							state <= DUMP2;
 						end else
 							state <= START;
@@ -248,7 +259,22 @@ module top(
 							addr <= addr + 1;
 						end
 					end
-			default: state <= START;
+			EXEC0:	begin
+						mem_waddr <= 0;
+						mem_data_in <= len[15:8];
+						mem_write <= 1;
+						state <= EXEC1;
+					end
+			EXEC1:	begin
+						mem_waddr <= 1;
+						mem_data_in <= len[7:0];
+						mem_write <= 1;
+						state <= EXEC2;
+					end
+			EXEC2:	begin // would transfer control to cpu
+						state <= START;
+					end
+			default: state <= FLUSH;
 		endcase
 	end
 
