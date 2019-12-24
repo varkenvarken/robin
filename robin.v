@@ -94,6 +94,23 @@ module top(
 		.empty(fifo_in_empty)
 	);
 
+	// blockram
+	reg [7:0] mem_data_in;
+	reg [LOWMEM_ADDR_WIDTH-1:0] mem_waddr, mem_raddr;
+	reg mem_write;
+	wire [7:0] mem_data_out;
+
+	ram #(.addr_width(LOWMEM_ADDR_WIDTH))
+	mem(
+		.din		(mem_data_in), 
+		.write_en	(mem_write), 
+		.waddr		(mem_waddr), 
+		.wclk(CLK), 
+		.raddr		(mem_raddr), 
+		.rclk(CLK),
+		.dout		(mem_data_out)
+	);
+
 
 	// transfer incoming bytes to the fifo
 	reg receiving = 0;
@@ -110,15 +127,88 @@ module top(
 		end 
 	end
 
-	// process bytes, in this case echo them as fast a possible to the transmit line
+	// monitor, currently supports
+	// load: transfer bytes to blockram
+	//		01 <addr> <len> <byte ...>
+	// dump: show bytes in blockram
+	//		02 <addr> <len>
+
+	// monitor state, reflected in the green leds for debugging
+	reg [3:0] state = FLUSH;
+	always @(posedge CLK) begin
+		LED2 <= state[0];
+		LED3 <= state[1];
+		LED4 <= state[2];
+		LED5 <= state[3];
+	end
+
+	// control registers for the load and dump operations
+	reg [7:0] bytes[6]; // cmd, adr1, adr2, adr3, len1, len2
+	reg [2:0] rc;
+
+	// monitor state machine
+	localparam START   = 4'd0;
+	localparam FLUSH   = 4'd1;
+	localparam READ    = 4'd2;
+	localparam READ1   = 4'd3;
+	localparam DUMP    = 4'd4;
+	localparam DUMP1   = 4'd5;
+	localparam DUMP2   = 4'd6;
+
+	//reg waitcycle;
+	reg [15:0] counter;
 	always @(posedge CLK) begin
 		fifo_in_read <= 0;
 		u_transmit <= 0;
-		if(~fifo_in_empty & ~u_is_transmitting ) begin
-			u_tx_byte <= fifo_in_data_out;
-			fifo_in_read <= 1;
-			u_transmit <= 1;
+		mem_write <= 0;
+		if(~reset) begin
+			state <= FLUSH;
 		end
+		case(state)
+			FLUSH:  begin
+						if(~fifo_in_empty)
+							fifo_in_read <= 1;
+						else
+							state <= START;
+					end
+			START:	begin
+						rc <= 0;
+						state <= READ;
+					end
+			READ:	begin
+						if(~fifo_in_empty) begin
+							bytes[rc] <= fifo_in_data_out;
+							fifo_in_read <= 1;
+							state <= READ1;
+						end
+					end
+			READ1:	begin
+						if(~u_is_transmitting) begin
+							u_tx_byte <= bytes[rc];
+							u_transmit <= 1;
+							rc <= rc + 1;
+							state <= rc == 5 ? DUMP : READ;
+						end
+					end
+			DUMP:	begin
+						rc <= 0;
+						state <= DUMP1;
+					end
+			DUMP1:	begin
+						if(~u_is_transmitting) begin
+							u_tx_byte <= bytes[rc];
+							u_transmit <= 1;
+							rc <= rc + 1;
+							state <= rc == 5 ? START : DUMP2;
+							counter <= 16'hfff;
+						end
+					end
+			DUMP2:	if(counter)
+						counter <= counter - 1;
+					else
+						state <= DUMP1;
+			default: state <= START;
+		endcase
 	end
 
 endmodule
