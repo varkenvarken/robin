@@ -145,16 +145,23 @@ module top(
 	// control registers for the load and dump operations
 	reg [7:0] bytes[6]; // cmd, adr1, adr2, adr3, len1, len2
 	reg [2:0] rc;
+	reg [15:0] len;
+	reg [LOWMEM_ADDR_WIDTH-1:0] addr;
 
 	// monitor state machine
 	localparam START   = 4'd0;
 	localparam FLUSH   = 4'd1;
 	localparam READ    = 4'd2;
 	localparam READ1   = 4'd3;
-	localparam DUMP    = 4'd4;
-	localparam DUMP1   = 4'd5;
-	localparam DUMP2   = 4'd6;
+	localparam PREP    = 4'd4;
+	localparam DUMP0   = 4'd5;
+	localparam DUMP1   = 4'd6;
+	localparam DUMP2   = 4'd7;
+	localparam LOAD0   = 4'd8;
+	localparam LOAD1   = 4'd9;
+	localparam LOAD2   = 4'd10;
 
+	reg [7:0] tmp;
 	//reg waitcycle;
 	reg [15:0] counter;
 	always @(posedge CLK) begin
@@ -187,26 +194,60 @@ module top(
 							u_tx_byte <= bytes[rc];
 							u_transmit <= 1;
 							rc <= rc + 1;
-							state <= rc == 5 ? DUMP : READ;
+							state <= rc == 5 ? PREP : READ;
 						end
 					end
-			DUMP:	begin
-						rc <= 0;
-						state <= DUMP1;
+			PREP:	begin
+						addr = {bytes[2],bytes[3]};
+						len  = {bytes[4],bytes[5]};
+						state <= bytes[0][0] ? LOAD0: DUMP0;
+					end
+			DUMP0:	begin
+						if(len) begin
+							mem_raddr <= addr;
+							len <= len - 1;
+							addr <= addr + 1;
+							counter <= 16'hfff;
+							state <= DUMP2;
+						end else
+							state <= START;
 					end
 			DUMP1:	begin
 						if(~u_is_transmitting) begin
-							u_tx_byte <= bytes[rc];
+							u_tx_byte <= mem_data_out;
 							u_transmit <= 1;
-							rc <= rc + 1;
-							state <= rc == 5 ? START : DUMP2;
-							counter <= 16'hfff;
+							state <= DUMP0;
 						end
 					end
 			DUMP2:	if(counter)
 						counter <= counter - 1;
 					else
 						state <= DUMP1;
+			LOAD0:	begin
+						if(len) begin
+							mem_waddr <= addr;
+							len <= len - 1;
+							state <= LOAD1;
+						end else
+							state <= START;
+					end
+			LOAD1:	begin
+						if(~fifo_in_empty) begin
+							mem_data_in <= fifo_in_data_out;
+							tmp <= fifo_in_data_out;
+							fifo_in_read <= 1;
+							mem_write <= 1;
+							state <= LOAD2;
+						end
+					end
+			LOAD2:	begin
+						if(~u_is_transmitting) begin
+							u_tx_byte <= tmp;
+							u_transmit <= 1;
+							state <= LOAD0;
+							addr <= addr + 1;
+						end
+					end
 			default: state <= START;
 		endcase
 	end
