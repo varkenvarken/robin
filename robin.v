@@ -95,21 +95,43 @@ module top(
 		.empty(fifo_in_empty)
 	);
 
+	// these will be converted to wires and wired to the cpu instance
+	reg [7:0] cpu_data_in;
+	reg [LOWMEM_ADDR_WIDTH-1:0] cpu_waddr, cpu_raddr;
+	reg cpu_write;
+	wire [7:0] cpu_data_out;
+
+	reg running = 0;
+
 	// blockram
+	// monitor managed registers (all mem_ prefixes probably should be renamed to to mon_ )
 	reg [7:0] mem_data_in;
 	reg [LOWMEM_ADDR_WIDTH-1:0] mem_waddr, mem_raddr;
 	reg mem_write;
 	wire [7:0] mem_data_out;
 
+	// actual wiring to ram
+	wire [7:0] ram_data_in;
+	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr, ram_raddr;
+	wire ram_write;
+	wire [7:0] ram_data_out;
+
+	assign ram_data_in = running ? cpu_data_in : mem_data_in;
+	assign ram_waddr   = running ? cpu_waddr   : mem_waddr;
+	assign ram_raddr   = running ? cpu_raddr   : mem_raddr;
+	assign ram_write   = running ? cpu_write   : mem_write;
+	assign mem_data_out= ram_data_out;
+	assign cpu_data_out= ram_data_out;
+
 	ram #(.addr_width(LOWMEM_ADDR_WIDTH))
 	mem(
-		.din		(mem_data_in), 
-		.write_en	(mem_write), 
-		.waddr		(mem_waddr), 
+		.din		(ram_data_in), 
+		.write_en	(ram_write), 
+		.waddr		(ram_waddr), 
 		.wclk(CLK), 
-		.raddr		(mem_raddr), 
+		.raddr		(ram_raddr), 
 		.rclk(CLK),
-		.dout		(mem_data_out)
+		.dout		(ram_data_out)
 	);
 
 
