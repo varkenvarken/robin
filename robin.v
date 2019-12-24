@@ -69,6 +69,7 @@ module top(
 		// output reg [3:0] rx_sample_countdown
 	);
 
+	// link uart error to red led. Will flash on break.
 	always @(posedge CLK)
 	begin
 		LEDR_N <= ~u_error;
@@ -93,103 +94,31 @@ module top(
 		.empty(fifo_in_empty)
 	);
 
-	// fast blockram
-	reg lowmem_write;
-	reg [7:0] lowmem_data_in;
-	reg [LOWMEM_ADDR_WIDTH-1:0] lowmem_raddr, lowmem_waddr;
-	wire [7:0] lowmem_data_out;
 
-	ram #(.addr_width(LOWMEM_ADDR_WIDTH))
-	ram0(
-		.din		(lowmem_data_in), 
-		.write_en	(lowmem_write), 
-		.waddr		(lowmem_waddr), 
-		.wclk(CLK), 
-		.raddr		(lowmem_raddr), 
-		.rclk(CLK),
-		.dout		(lowmem_data_out)
-	);
-
-	// monitor
-	// three commands
-	// 01 addrh addrm addrl lenhi lenlo 				dump bytes at address
-	// 02 addrh addrm addrl lenhi lenlo 	byte ...	load bytes at address
-	// 04 addrh addrm addrl								execute code at address
-
-	localparam START = 0;
-	localparam ADDRH = 1;
-	localparam ADDRM = 2;
-	localparam ADDRL = 3;
-	localparam LENHI = 4;
-	localparam LENLO = 5;
-	localparam DUMP  = 6;
-	localparam LOAD  = 7;
-	localparam EXEC  = 8;
-	localparam DUMP1 = 9;
-	reg [3:0] state = 0;
-
+	// transfer incoming bytes to the fifo
 	reg receiving = 0;
-	reg wait_one = 0;
-	reg echo_one = 0;
-
-	reg [7:0] cmd;
-	reg [23:0] address;
-	reg [15:0] length;
-
 	always @(posedge CLK) begin
 		fifo_in_write <= 0;
-		fifo_in_read <= 0;
-		u_transmit <= 0;
-		// transfer incoming bytes to the fifo
 		if(~reset) begin
 			receiving <= 0;
-			state <= 0;
 		end else if(u_received & ~receiving) begin
 			fifo_in_data_in <= u_rx_byte;
 			receiving <= 1;
 		end else if(receiving) begin
 			fifo_in_write <= 1;
 			receiving <= 0;
-		// the commented code introduces a wait cycle for the blockram.
-		// this is in fact redundant. (The blockram can be written in one cycle @12MHz)
-		end else if(wait_one) begin
-			wait_one <= 0;
-			//u_transmit <= 1;
-		// process any bytes in the fifo.
-		// This cannot be done in parallel with writing to the fifo!
-		// Hence the if .. else if .. to make actions mutually exclusive
-		end else if(~fifo_in_empty & ~u_is_transmitting ) begin
-			// echo incoming
-			u_tx_byte <= fifo_in_data_out;
-			fifo_in_read <= 1;
-			//wait_one <= 1;
-			u_transmit <= 1;
-			case (state)
-				START: begin cmd <= fifo_in_data_out; state <= ADDRH; end
-				ADDRH: begin address[23:16] <= fifo_in_data_out; state <= ADDRM; end
-				ADDRM: begin address[15: 8] <= fifo_in_data_out; state <= ADDRL; end
-				ADDRL: begin address[ 7: 0] <= fifo_in_data_out; state <= LENHI; end
-				LENHI: begin  length[15: 8] <= fifo_in_data_out; state <= LENLO; end
-				LENLO: begin  length[ 7: 0] <= fifo_in_data_out; state <= cmd[0] ? DUMP : (cmd[1] ? LOAD: EXEC); end
-				default: state <= START;
-			endcase
-		end else if(state == DUMP) begin
-			lowmem_raddr <= address[LOWMEM_ADDR_WIDTH-1:0];
-			state <= length > 0 ? DUMP1 : START;
-		end else if(state == DUMP1 & ~u_is_transmitting) begin
-			u_tx_byte <= lowmem_data_out;
-			u_transmit <= 1;
-			address <= address[LOWMEM_ADDR_WIDTH-1:0] + 1;
-			length <= length - 1;
-			state <= DUMP;
-		end
+		end 
 	end
 
-	// main iCEbreaker button
-	//wire button_n;
-	//debounce #(.DEBOUNCE_LIMIT(960000), .DEBOUNCE_SIZE(20)) main_button(CLK,BTN_N,button_n); // 80 ms @ 12 MHz
+	// process bytes, in this case echo them as fast a possible to the transmit line
 	always @(posedge CLK) begin
-		LEDG_N <= BTN_N;
+		fifo_in_read <= 0;
+		u_transmit <= 0;
+		if(~fifo_in_empty & ~u_is_transmitting ) begin
+			u_tx_byte <= fifo_in_data_out;
+			fifo_in_read <= 1;
+			u_transmit <= 1;
+		end
 	end
 
 endmodule
