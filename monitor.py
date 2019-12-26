@@ -128,12 +128,13 @@ class Monitor(cmd.Cmd):
 
 	def splitrun(self, line):
 		"""
-		split line into arguments:  ADDR [args ...]
+		split line into arguments:  ADDR [VAL]
 		"""
 		self.args = line.strip().split()
 		self.addr = int(self.args[0],16)
+		self.value = int(self.args[1], base=0) if len(self.args) > 1 else 0
 		hexbytes = []
-		return self.addr
+		return self.addr, self.value
 
 	def wait(self,t):
 		"""
@@ -404,9 +405,7 @@ class Monitor(cmd.Cmd):
 		run <hexaddress> [arg]	run program at <hexaddress> showing output as hexbytes
 		"""
 		self.flush()
-		addr = self.splitrun(line)
-		# argument is ignored for now and set to 0
-		val = 0
+		addr, val = self.splitrun(line)
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -468,9 +467,7 @@ class Monitor(cmd.Cmd):
 		runp <hexaddress> [arg]	run program at <hexaddress> with a separate read process, showing output as hexbytes
 		"""
 		self.flush()
-		addr = self.splitrun(line)
-		# argument is ignored for now and set to 0
-		val = 0
+		addr, val = self.splitrun(line)
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -493,15 +490,13 @@ class Monitor(cmd.Cmd):
 
 	def do_runps(self, line):
 		"""
-		runps <hexaddress> [arg]	run program at <hexaddress> with a separate read process, showing output as unicode strings
+		runps <hexaddress> [arg] [-t]	run program at <hexaddress> with a separate read process, showing output as unicode strings
 		"""
 		self.flush()
-		addr = self.splitrun(line)
+		addr, val = self.splitrun(line)
 		self.timestamp = False
-		if len(self.args) > 1 and self.args[1] == '-t':
+		if len(self.args) > 2 and self.args[2] == '-t':
 			self.timestamp = True
-		# argument is ignored for now and set to 0
-		val = 0
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -565,9 +560,7 @@ class Monitor(cmd.Cmd):
 		runs <hexaddress> [arg] 	run program at <hexaddress> showing output as unicode chars
 		"""
 		self.flush()
-		addr = self.splitrun(line)
-		# argument is ignored for now and set to 0
-		val = 0
+		addr, val = self.splitrun(line)
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -612,7 +605,7 @@ class Monitor(cmd.Cmd):
 
 	def do_echo(self, line):
 		"""
-		write anything and show response until ctrl-c
+		write anything and show response until ctrl-c, i.e. switch to terminal mode
 		"""
 		self.flush()
 		self.timestamp = False
