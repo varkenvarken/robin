@@ -12,7 +12,11 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	input halt;
 	output reg halted;
 
+	// general registers
 	reg [31:0] r[16];
+
+	// special registers
+	reg [15:0] instruction;
 
 	reg [3:0] state;
 	localparam START	= 0;
@@ -28,6 +32,12 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	localparam HALT6	= 10;
 	localparam HALT7	= 11;
 	localparam HALTED	= 12;
+	localparam FETCH1	= 13;
+	localparam FETCH2	= 14;
+	localparam FETCH3	= 15;
+
+	wire haltinstruction = &instruction; // all ones
+	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -38,9 +48,11 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 			r[15] <= start_address;
 			halted <= 0;
 			state <= START;
+			instruction <= 0;
 		end else
-		if(halt) begin
+		if(halt | haltinstruction) begin
 			state <= HALT;
+			instruction <= 0;
 		end else
 			case(state)
 				START	:	begin
@@ -56,7 +68,24 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 								r[2][7:0] <= mem_data_out;
 								state <= FETCH;
 							end
-				FETCH	:	state <= HALT; // fetch not yet implemented
+				FETCH	:	begin
+								mem_raddr <= ip;
+								state <= FETCH1;
+							end
+				FETCH1	:	begin
+								instruction[15:8] <= mem_data_out;
+								r[15] <= r[15] + 1;
+								state <= FETCH2;
+							end
+				FETCH2	:	begin
+								mem_raddr <= ip;
+								state <= FETCH3;
+							end
+				FETCH3	:	begin
+								instruction[7:0] <= mem_data_out;
+								r[15] <= r[15] + 1;
+								state <= FETCH; // endless loop that basically just scans for 0xFFFF (halt)
+							end
 				HALT	:	begin
 								mem_waddr <= 2;
 								mem_data_in <= r[15][31:24];
