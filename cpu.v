@@ -13,12 +13,15 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	output reg halted;
 
 	// general registers
-	reg [31:0] r[16];
+	reg [31:0] r[0:15];
 
 	// special registers
 	reg [15:0] instruction;
+	reg [3:0] rc; // counter to iterate over all registers
 
-	reg [3:0] state;
+	reg [addr_width-1:0] mem_waddr_next;
+
+	reg [4:0] state;
 	localparam START	= 0;
 	localparam START1	= 1;
 	localparam START2	= 2;
@@ -35,9 +38,35 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	localparam FETCH1	= 13;
 	localparam FETCH2	= 14;
 	localparam FETCH3	= 15;
+	localparam DECODE	= 16;
+	localparam EXECUTE	= 17;
+	localparam LOAD1	= 18;
+	localparam WRITEWAIT= 19;
+	localparam WAIT     = 20;
+	localparam START1b	= 21;
+	localparam START1w	= 22;
+	localparam START2w	= 23;
+	localparam FETCH1w	= 24;
+	localparam FETCH3w	= 25;
+	localparam LOAD1w	= 26;
 
 	wire haltinstruction = &instruction; // all ones
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
+
+	wire [3:0] cmd = instruction[15:12]; // main opcode
+	wire [3:0] R2  = instruction[11: 8]; // destination register
+	wire [3:0] R1  = instruction[ 7: 4]; // source register 1
+	wire [3:0] R0  = instruction[ 3: 0]; // source register 0
+	wire writable_destination = R2 > 1;	 // r0 and r1 are fixed at 0 and 1 respectively
+	wire [7:0] immediate = instruction[7:0];
+
+	wire [31:0] sumr1r0 = r[R1] + r[R0];
+	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
+
+	localparam CMD_MOVEP =  0;
+	localparam CMD_LOADB =  4;
+	localparam CMD_STORB =  8;
+	localparam CMD_LOADI = 12;
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -52,26 +81,34 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 		end else
 		if(halt | haltinstruction) begin
 			state <= HALT;
-			instruction <= 0;
+			instruction <= 0; // this will clear haltinstruction
+			rc <= 0;
+			mem_waddr_next <= 2; // start address of register dump
 		end else
 			case(state)
 				START	:	begin
 								mem_raddr <= 0;
-								state <= START1;
+								state <= START1w;
 							end
+				START1w	:	state <= START1;
 				START1	:	begin
 								r[2][15:8] <= mem_data_out; // no check for mem_ready yet
-								mem_raddr <= 1;
-								state <= START2;
+								state <= START1b;
 							end
+				START1b	:	begin
+								mem_raddr <= 1;
+								state <= START2w;
+							end
+				START2w	:	state <= START2;
 				START2	:	begin
 								r[2][7:0] <= mem_data_out;
 								state <= FETCH;
 							end
 				FETCH	:	begin
 								mem_raddr <= ip;
-								state <= FETCH1;
+								state <= FETCH1w;
 							end
+				FETCH1w	:	state <= FETCH1;
 				FETCH1	:	begin
 								instruction[15:8] <= mem_data_out;
 								r[15] <= r[15] + 1;
@@ -79,51 +116,91 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 							end
 				FETCH2	:	begin
 								mem_raddr <= ip;
-								state <= FETCH3;
+								state <= FETCH3w;
 							end
+				FETCH3w	:	state <= FETCH3;
 				FETCH3	:	begin
 								instruction[7:0] <= mem_data_out;
 								r[15] <= r[15] + 1;
-								state <= FETCH; // endless loop that basically just scans for 0xFFFF (halt)
+								state <= DECODE;
 							end
-				HALT	:	begin
-								mem_waddr <= 2;
-								mem_data_in <= r[15][31:24];
+				DECODE	:	state <= EXECUTE;
+				EXECUTE :	begin
+								state <= WAIT;
+								case(cmd)
+									CMD_MOVEP:	begin
+													if(writable_destination) r[R2] <= sumr1r0;
+												end
+									CMD_LOADB:	begin
+													mem_raddr <= sumr1r0_addr;
+													state <= LOAD1w;
+												end
+									CMD_STORB:	begin
+													mem_waddr <= sumr1r0_addr;
+													mem_data_in <= r[R2];
+													state <= WRITEWAIT;
+												end
+									CMD_LOADI:	begin
+													if(writable_destination) r[R2] <= immediate;
+												end
+									default: state <= FETCH;
+								endcase
+							end
+				LOAD1w	:	state <= LOAD1;
+				LOAD1	:	begin
+								if(writable_destination) r[R2][7:0] <= mem_data_out;
+								state <= FETCH;
+							end
+				WRITEWAIT:	begin
 								mem_write <= 1;
+								state <= WAIT;
+							end
+				WAIT	:	state <= FETCH;
+				HALT	:	begin
+								mem_waddr <= mem_waddr_next;
+								mem_data_in <= r[rc][31:24];
 								state <= HALT1;
 							end
 				HALT1	:	begin
+								mem_write <= 1;
+								mem_waddr_next <= mem_waddr + 1;
 								state <= HALT2;
 							end
 				HALT2	:	begin
-								mem_waddr <= 3;
-								mem_data_in <= r[15][23:16];
-								mem_write <= 1;
+								mem_waddr <= mem_waddr_next;
+								mem_data_in <= r[rc][23:16];
 								state <= HALT3;
 							end
 				HALT3	:	begin
+								mem_write <= 1;
+								mem_waddr_next <= mem_waddr + 1;
 								state <= HALT4;
 							end
 				HALT4	:	begin
-								mem_waddr <= 4;
-								mem_data_in <= r[15][15:8];
-								mem_write <= 1;
+								mem_waddr <= mem_waddr_next;
+								mem_data_in <= r[rc][15:8];
 								state <= HALT5;
 							end
 				HALT5	:	begin
+								mem_write <= 1;
+								mem_waddr_next <= mem_waddr + 1;
 								state <= HALT6;
 							end
 				HALT6	:	begin
-								mem_waddr <= 5;
-								mem_data_in <= r[15][7:0];
-								mem_write <= 1;
+								mem_waddr <= mem_waddr_next;
+								mem_data_in <= r[rc][7:0];
 								state <= HALT7;
 							end
 				HALT7	:	begin
+								mem_write <= 1;
+								mem_waddr_next <= mem_waddr + 1;
+								rc <= rc + 1;
+								state <= (rc == 4'b1111) ? HALTED : HALT;
+							end
+				HALTED	:	begin
 								halted <= 1;
 								state <= HALTED;
 							end
-				HALTED	:	state <= HALTED;
 				default	:	state <= HALT;
 			endcase
 	end
