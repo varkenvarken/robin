@@ -38,7 +38,7 @@ module top(
 	reg [7:0] u_rx_byte;
 	reg u_transmit;
 	wire u_received,u_is_transmitting;
-	wire u_break,u_error;
+	wire u_error;
 	wire u_reset;
 	assign u_reset = ~reset; // uart reset is active high
 
@@ -95,13 +95,35 @@ module top(
 		.empty(fifo_in_empty)
 	);
 
-	// these will be converted to wires and wired to the cpu instance
-	reg [7:0] cpu_data_in;
-	reg [LOWMEM_ADDR_WIDTH-1:0] cpu_waddr, cpu_raddr;
-	reg cpu_write;
+	// cpu and wiring
+	wire [7:0] cpu_data_in;
+	wire [LOWMEM_ADDR_WIDTH-1:0] cpu_waddr, cpu_raddr;
+	wire cpu_write;
 	wire [7:0] cpu_data_out;
+	reg cpu_reset;
+	reg cpu_halt;
+	wire cpu_halted;
+
+	cpu #(.addr_width(LOWMEM_ADDR_WIDTH)) cpu0(
+		.clk(CLK), 
+		.mem_data_out(cpu_data_out),
+		.mem_data_in(cpu_data_in),
+		.mem_raddr(cpu_raddr),
+		.mem_waddr(cpu_waddr),
+		.mem_write(cpu_write),
+		.mem_ready(1),
+		.start_address(addr),
+		.reset(cpu_reset),
+		.halt(cpu_halt),
+		.halted(cpu_halted)
+	);
 
 	reg running = 0;
+	// link running indicatator to green led
+	always @(posedge CLK)
+	begin
+		LEDG_N <= ~running;
+	end
 
 	// blockram
 	// monitor managed registers (all mem_ prefixes probably should be renamed to to mon_ )
@@ -189,6 +211,8 @@ module top(
 	localparam EXEC0   = 4'd11;
 	localparam EXEC1   = 4'd12;
 	localparam EXEC2   = 4'd13;
+	localparam RUN0    = 4'd14;
+	localparam RUNNING = 4'd15;
 
 	reg [7:0] tmp;
 	reg [15:0] counter;
@@ -196,8 +220,11 @@ module top(
 		fifo_in_read <= 0;
 		u_transmit <= 0;
 		mem_write <= 0;
+		cpu_reset <= 0;
 		if(~reset) begin
 			state <= FLUSH;
+			running <= 0;
+			cpu_halt <= 1;
 		end
 		case(state)
 			FLUSH:  begin
@@ -293,8 +320,18 @@ module top(
 						mem_write <= 1;
 						state <= EXEC2;
 					end
-			EXEC2:	begin // would transfer control to cpu
-						state <= START;
+			EXEC2:	begin
+						cpu_halt <= 0;
+						running <= 1;
+						cpu_reset <= 1;
+						state <= RUN0;
+					end
+			RUN0:	state <= RUNNING;
+			RUNNING:begin // add memory mapped io later
+						if(cpu_halted) begin
+							running <= 0;
+							state <= FLUSH;
+						end
 					end
 			default: state <= FLUSH;
 		endcase
