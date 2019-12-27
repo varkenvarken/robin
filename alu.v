@@ -22,7 +22,11 @@ module alu(
 	wire [32:0] cmp = sub[32] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
 	wire [32:0] shiftl = {a[31:0],1'b0};
 	wire [32:0] shiftr = {a[0],1'b0,a[31:1]};
-	wire [31:0] multlo16 = a[15:0] * b[15:0];
+	wire [31:0] mult_al_bl = a[15: 0] * b[15: 0];
+	wire [31:0] mult_al_bh = a[15: 0] * b[31:16];
+	wire [31:0] mult_ah_bl = a[31:16] * b[15: 0];
+	wire [31:0] mult_ah_bh = a[31:16] * b[31:16];
+	wire [63:0] mult64 = {32'b0,mult_al_bl} + {16'b0,mult_al_bh,16'b0} + {16'b0,mult_ah_bl,16'b0} + {mult_ah_bh,32'b0};
 
 	wire [32:0] result;
 
@@ -42,7 +46,9 @@ module alu(
 				op == 12 ? shiftl :
 				op == 13 ? shiftr :
 
-				op == 16 ? {{17{1'b0}}, multlo16} :
+				op == 16 ? {17'b0, mult_al_bl} :
+				op == 17 ? {1'b0, mult64[31:0]} :
+				op == 18 ? {1'b0, mult64[63:32]} :
 				33'b0;
 	end
 
