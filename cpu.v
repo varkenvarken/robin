@@ -76,7 +76,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	// branch logic
 	wire [31:0] relative = {{24{immediate[7]}},immediate}; // 8 bit sign extended to 32
 	wire [31:0] branchtarget = r[15] + relative;
-	wire takebranch = ((r[13][2:0] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
+	wire takebranch = ((r[13][31:29] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
 
 	wire [31:0] sumr1r0 = r[R1] + r[R0];
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
@@ -98,7 +98,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 			r[0] <= 0;
 			r[1] <= 1;
 			r[2] <= 0;
-			r[13] <= 4; // flags register, bit 2 is always on, bit 1 is negative, bit 0 is zero
+			r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bits [7;0] is aluop
 			r[15] <= start_address;
 			halted <= 0;
 			state <= START;
@@ -130,6 +130,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 								state <= FETCH;
 							end
 				FETCH	:	begin
+								r[13][31] <= 1; // force the always on bit
 								mem_raddr <= ip;
 								state <= FETCH1w;
 							end
