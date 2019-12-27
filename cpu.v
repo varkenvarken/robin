@@ -90,6 +90,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	localparam CMD_STORL = 10;
 	localparam CMD_LOADI = 12;
 	localparam CMD_BRANCH= 13;
+	localparam CMD_JUMP  = 14;
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -187,6 +188,10 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 												end
 									CMD_BRANCH:	begin
 													if(takebranch) r[15] <= branchtarget;
+												end
+									CMD_JUMP:	begin
+													if(writable_destination) r[R2] <= r[15];
+													r[15] <= sumr1r0;
 												end
 									default: state <= FETCH;
 								endcase
