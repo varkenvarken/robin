@@ -73,6 +73,11 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	wire writable_destination = R2 > 1;	 // r0 and r1 are fixed at 0 and 1 respectively
 	wire [7:0] immediate = instruction[7:0];
 
+	// branch logic
+	wire [31:0] relative = {{24{immediate[7]}},immediate}; // 8 bit sign extended to 32
+	wire [31:0] branchtarget = r[15] + relative;
+	wire takebranch = ((r[13][2:0] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
+
 	wire [31:0] sumr1r0 = r[R1] + r[R0];
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
 
@@ -84,6 +89,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	localparam CMD_STORW =  9;
 	localparam CMD_STORL = 10;
 	localparam CMD_LOADI = 12;
+	localparam CMD_BRANCH= 13;
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -91,6 +97,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 			r[0] <= 0;
 			r[1] <= 1;
 			r[2] <= 0;
+			r[13] <= 4; // flags register, bit 2 is always on, bit 1 is negative, bit 0 is zero
 			r[15] <= start_address;
 			halted <= 0;
 			state <= START;
@@ -177,6 +184,9 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 												end
 									CMD_LOADI:	begin
 													if(writable_destination) r[R2] <= immediate;
+												end
+									CMD_BRANCH:	begin
+													if(takebranch) r[15] <= branchtarget;
 												end
 									default: state <= FETCH;
 								endcase
