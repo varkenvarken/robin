@@ -42,6 +42,15 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 		.is_negative(alu_is_negative)
 	);
 
+	// cycle counter
+	reg [31:0] counter;
+	always @(posedge clk) begin
+		if(reset)
+			counter <= 0;
+		else
+			counter <= counter + 1;
+	end
+
 	// state machine
 	reg [5:0] state;
 	localparam START	= 0;
@@ -103,17 +112,18 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	wire [31:0] sumr1r0 = r[R1] + r[R0];
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
 
-	localparam CMD_MOVEP =  0;
-	localparam CMD_ALU   =  2;
-	localparam CMD_LOADB =  4;
-	localparam CMD_LOADW =  5;
-	localparam CMD_LOADL =  6;
-	localparam CMD_STORB =  8;
-	localparam CMD_STORW =  9;
-	localparam CMD_STORL = 10;
-	localparam CMD_LOADI = 12;
-	localparam CMD_BRANCH= 13;
-	localparam CMD_JUMP  = 14;
+	localparam CMD_MOVEP   =  0;
+	localparam CMD_ALU     =  2;
+	localparam CMD_LOADB   =  4;
+	localparam CMD_LOADW   =  5;
+	localparam CMD_LOADL   =  6;
+	localparam CMD_STORB   =  8;
+	localparam CMD_STORW   =  9;
+	localparam CMD_STORL   = 10;
+	localparam CMD_LOADI   = 12;
+	localparam CMD_BRANCH  = 13;
+	localparam CMD_JUMP    = 14;
+	localparam CMD_SPECIAL = 15; // note that halt (= 0xffff) is dealt with in a different manner
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -222,6 +232,10 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 									CMD_JUMP:	begin
 													if(writable_destination) r[R2] <= r[15];
 													r[15] <= sumr1r0;
+												end
+									CMD_SPECIAL:begin // no additional selection on subcommands yet
+													if(writable_destination) r[R2] <= counter;
+													state <= FETCH;
 												end
 									default: state <= FETCH;
 								endcase
