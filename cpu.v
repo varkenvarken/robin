@@ -21,7 +21,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 
 	reg [addr_width-1:0] mem_waddr_next;
 
-	reg [4:0] state;
+	reg [5:0] state;
 	localparam START	= 0;
 	localparam START1	= 1;
 	localparam START2	= 2;
@@ -49,6 +49,19 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	localparam FETCH1w	= 24;
 	localparam FETCH3w	= 25;
 	localparam LOAD1w	= 26;
+	localparam LOADWw	= 27;
+	localparam LOADW1	= 28;
+	localparam LOADLw	= 29;
+	localparam LOADL1	= 30;
+	localparam LOADLw2	= 31;
+	localparam LOADL2	= 32;
+	localparam WRITEWAITB= 33;
+	localparam WRITEWAITW= 34;
+	localparam WRITEWAITW1= 35;
+	localparam WRITEWAITL= 36;
+	localparam WRITEWAITL1= 37;
+	localparam WRITEWAITL2= 38;
+	localparam WRITEWAITL3= 39;
 
 	wire haltinstruction = &instruction; // all ones
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
@@ -65,7 +78,11 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 
 	localparam CMD_MOVEP =  0;
 	localparam CMD_LOADB =  4;
+	localparam CMD_LOADW =  5;
+	localparam CMD_LOADL =  6;
 	localparam CMD_STORB =  8;
+	localparam CMD_STORW =  9;
+	localparam CMD_STORL = 10;
 	localparam CMD_LOADI = 12;
 
 	always @(posedge clk) begin
@@ -135,10 +152,28 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 													mem_raddr <= sumr1r0_addr;
 													state <= LOAD1w;
 												end
+									CMD_LOADW:	begin
+													mem_raddr <= sumr1r0_addr;
+													state <= LOADWw;
+												end
+									CMD_LOADL:	begin
+													mem_raddr <= sumr1r0_addr;
+													state <= LOADLw;
+												end
 									CMD_STORB:	begin
 													mem_waddr <= sumr1r0_addr;
-													mem_data_in <= r[R2];
-													state <= WRITEWAIT;
+													mem_data_in <= r[R2][7:0];
+													state <= WRITEWAITB;
+												end
+									CMD_STORW:	begin
+													mem_waddr <= sumr1r0_addr;
+													mem_data_in <= r[R2][15:8];
+													state <= WRITEWAITW;
+												end
+									CMD_STORL:	begin
+													mem_waddr <= sumr1r0_addr;
+													mem_data_in <= r[R2][31:24];
+													state <= WRITEWAITL;
 												end
 									CMD_LOADI:	begin
 													if(writable_destination) r[R2] <= immediate;
@@ -146,12 +181,57 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 									default: state <= FETCH;
 								endcase
 							end
+				LOADLw	:	state <= LOADL1;
+				LOADL1	:	begin
+								if(writable_destination) r[R2][31:24] <= mem_data_out;
+								mem_raddr <= mem_raddr + 1;
+								state <= LOADLw2;
+							end
+				LOADLw2	:	state <= LOADL2;
+				LOADL2	:	begin
+								if(writable_destination) r[R2][23:16] <= mem_data_out;
+								mem_raddr <= mem_raddr + 1;
+								state <= LOADWw;
+							end
+				LOADWw	:	state <= LOADW1;
+				LOADW1	:	begin
+								if(writable_destination) r[R2][15:8] <= mem_data_out;
+								mem_raddr <= mem_raddr + 1;
+								state <= LOAD1w;
+							end
 				LOAD1w	:	state <= LOAD1;
 				LOAD1	:	begin
 								if(writable_destination) r[R2][7:0] <= mem_data_out;
 								state <= FETCH;
 							end
-				WRITEWAIT:	begin
+				WRITEWAITL:	begin
+								mem_write <= 1;
+								state <= WRITEWAITL1;
+							end
+				WRITEWAITL1:begin
+								mem_waddr <= mem_waddr + 1;
+								mem_data_in <= r[R2][23:16];
+								state <= WRITEWAITL2;
+							end
+				WRITEWAITL2:begin
+								mem_write <= 1;
+								state <= WRITEWAITL3;
+							end
+				WRITEWAITL3:begin
+								mem_waddr <= mem_waddr + 1;
+								mem_data_in <= r[R2][15:8];
+								state <= WRITEWAITW;
+							end
+				WRITEWAITW:	begin
+								mem_write <= 1;
+								state <= WRITEWAITW1;
+							end
+				WRITEWAITW1:begin
+								mem_waddr <= mem_waddr + 1;
+								mem_data_in <= r[R2][7:0];
+								state <= WRITEWAITB;
+							end
+				WRITEWAITB:	begin
 								mem_write <= 1;
 								state <= WAIT;
 							end
