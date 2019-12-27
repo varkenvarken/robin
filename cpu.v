@@ -21,6 +21,28 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 
 	reg [addr_width-1:0] mem_waddr_next;
 
+	// alu
+	wire [31:0] alu_a = r[R1];
+	wire [31:0] alu_b = r[R0];
+	wire alu_carry_in = r[13][28];
+	wire [7:0] alu_op = r[13][7:0];
+	wire [31:0] alu_c;
+	wire alu_carry_out;
+	wire alu_is_zero;
+	wire alu_is_negative;
+
+	alu alu0(
+		.a(alu_a),
+		.b(alu_b),
+		.carry_in(alu_carry_in),
+		.op(alu_op),
+		.c(alu_c),
+		.carry_out(alu_carry_out),
+		.is_zero(alu_is_zero),
+		.is_negative(alu_is_negative)
+	);
+
+	// state machine
 	reg [5:0] state;
 	localparam START	= 0;
 	localparam START1	= 1;
@@ -82,6 +104,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
 
 	localparam CMD_MOVEP =  0;
+	localparam CMD_ALU   =  2;
 	localparam CMD_LOADB =  4;
 	localparam CMD_LOADW =  5;
 	localparam CMD_LOADL =  6;
@@ -98,7 +121,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 			r[0] <= 0;
 			r[1] <= 1;
 			r[2] <= 0;
-			r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bits [7;0] is aluop
+			r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bit 28 is carry, bits [7;0] is aluop
 			r[15] <= start_address;
 			halted <= 0;
 			state <= START;
@@ -157,6 +180,12 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 									CMD_MOVEP:	begin
 													if(writable_destination) r[R2] <= sumr1r0;
 												end
+									CMD_ALU:	begin
+													if(writable_destination) r[R2] <= alu_c;
+													r[13][28] <= alu_carry_out;
+													r[13][29] <= alu_is_zero;
+													r[13][30] <= alu_is_negative;
+												end
 									CMD_LOADB:	begin
 													mem_raddr <= sumr1r0_addr;
 													state <= LOAD1w;
@@ -185,7 +214,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 													state <= WRITEWAITL;
 												end
 									CMD_LOADI:	begin
-													if(writable_destination) r[R2] <= immediate;
+													if(writable_destination) r[R2][7:0] <= immediate;
 												end
 									CMD_BRANCH:	begin
 													if(takebranch) r[15] <= branchtarget;
