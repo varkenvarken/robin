@@ -20,7 +20,7 @@ all: $(OUTPUT)
 	$(PNR) $(DEVICE) --placer $(PLACER) --package $(PACKAGE) --json $< --pcf $(PCF) --asc $@
 
 %.json: $(TOP) debounce.v fifo.v ram.v cpu.v alu.v $(PCF) Makefile
-	$(SYN) -q -p "read_verilog $<; hierarchy -libdir . ; synth_ice40 -flatten -json $@"
+	$(SYN) -q -p "read_verilog $<; hierarchy -libdir . ; synth_ice40 -dsp -flatten -json $@"
 
 clean:
 	rm -f *.bin *.blif *.tiles *.asc *.json
