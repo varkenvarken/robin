@@ -42,6 +42,7 @@ module alu(
 				op == 7 ? b_xor :
 
 				op == 8 ? cmp :
+				op == 9 ? {1'b0, a} :
 
 				op == 12 ? shiftl :
 				op == 13 ? shiftr :
