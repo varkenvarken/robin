@@ -299,6 +299,52 @@ class Monitor(cmd.Cmd):
 		if not self.scriptmode: print('\nok')
 		return False
 
+	def do_show(self, line):
+		"""
+		show      dump 16 4 byte words startign from address 2 (stored registers after halt)
+		"""
+		self.flush()
+		self.length = 64
+		addr = 2
+		data = [0x02, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((self.length >> 8) & 255), ((self.length) & 255)]
+		self.ser.write(bytes(data))
+		self.wait(0.1)
+		self.flush(len(data))
+		self.wait(0.1)
+		count = 0
+		alias = {0:'0', 1:'1', 2:'R2', 3:'R3', 4:'R4', 5:'R5', 6:'R6', 7:'R7',
+		         8:'R8', 9:'R9', 10:'R10', 11:'R11', 12:'LINK', 13:'FLAG', 14:'SP', 15:'PC'}
+		aluop = {0: 'add', 1:'adc', 2:'sub', 3:'sbc', 4:'or', 5:'and', 6:'not', 7:'xor', 8:'cmp', 9:'tst', 12:'<<', 13:'>>', 16:'mulw', 17:'mulllo',18:'mullhi'}
+		while self.ser.in_waiting:
+			ret = self.ser.read(self.ser.in_waiting)
+			w = 0
+			nb = 0
+			r = 0
+			asbytes = ""
+			for b in ret:
+				w *= 256
+				w += int(b)
+				asbytes += "%02x "%int(b)
+				nb += 1
+				if nb == 4:
+					nb = 0
+					if r==13:
+						always = w&0x80000000 > 0
+						neg = w&0x40000000 > 0
+						zero = w&0x20000000 > 0
+						carry = w&0x10000000 > 0
+						alu = w&0xff
+						alu = aluop[alu] if alu in aluop else str(alu)
+						print("R%-2d [%4s] A=%d N=%d Z=%d C=%d ALU=%-6s [ %s]"%(r,alias[r],always,neg,zero,carry,alu,asbytes))
+					else:
+						print("R%-2d [%4s] %13d,%12d [ %s]"%(r,alias[r],-(0x100000000 - w) if w > 0x7fffffff else w ,w,asbytes))
+					w = 0
+					r += 1
+					asbytes = ""
+			sleep(0.1)
+		if not self.scriptmode: print('\nok')
+		return False
+
 	def do_load(self, line):
 		"""
 		load <hexaddr> <byte> ...  load bytes into memory
