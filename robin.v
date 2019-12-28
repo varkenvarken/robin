@@ -132,6 +132,12 @@ module top(
 	reg mem_write;
 	wire [7:0] mem_data_out;
 
+	reg [7:0] inbyte;
+	reg [7:0] bytes_available;
+	wire override_byte = cpu_raddr == 256;
+	wire override_nbytes = cpu_raddr == 257;
+	wire clear_nbytes = (cpu_waddr == 257) & cpu_write;
+ 
 	// actual wiring to ram
 	wire [7:0] ram_data_in;
 	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr, ram_raddr;
@@ -143,7 +149,7 @@ module top(
 	assign ram_raddr   = running ? cpu_raddr   : mem_raddr;
 	assign ram_write   = running ? cpu_write   : mem_write;
 	assign mem_data_out= ram_data_out;
-	assign cpu_data_out= ram_data_out;
+	assign cpu_data_out= override_byte ? inbyte : (override_nbytes ? bytes_available : ram_data_out);
 
 	ram #(.addr_width(LOWMEM_ADDR_WIDTH))
 	mem(
@@ -175,17 +181,6 @@ module top(
 		.empty(fifo_out_empty)
 	);
 
-	// memory mapped serial transmit: write on address 0x100 will store byyte in output fifo
-	wire output_available = (cpu_waddr == 256) & cpu_write;
-	always @(posedge CLK) begin
-		fifo_out_write <= 0;
-		if(output_available)
-		begin
-			fifo_out_data_in <= cpu_data_in;
-			fifo_out_write <= 1;
-		end
-	end
-
 	// transfer incoming bytes to the fifo 
 	reg receiving = 0;
 	always @(posedge CLK) begin
@@ -201,12 +196,22 @@ module top(
 		end 
 	end
 
+	// memory mapped serial transmit: write on address 0x100 will store byyte in output fifo
+	wire output_available = (cpu_waddr == 256) & cpu_write;
+	always @(posedge CLK) begin
+		fifo_out_write <= 0;
+		if(output_available)
+		begin
+			fifo_out_data_in <= cpu_data_in;
+			fifo_out_write <= 1;
+		end
+	end
+
 	// monitor, currently supports
 	// load: transfer bytes to blockram
 	//		01 <addr> <len> <byte ...>
 	// dump: show bytes in blockram
 	//		02 <addr> <len>
-	// TODO
 	// exec: run program and load word into lower two bytes of memory
 	//		03 <addr> <word>
 
@@ -369,6 +374,16 @@ module top(
 							running <= 0;
 							state <= FLUSH;
 							LED1 <= 1;
+						end
+						if(~fifo_in_empty & bytes_available == 0) begin
+							inbyte <= fifo_in_data_out;
+							fifo_in_read <= 1;
+							bytes_available <= 1;
+							LED2 <= 1;
+						end
+						if(clear_nbytes) begin
+							bytes_available <= 0;
+							LED2 <= 0;
 						end
 						if(counter)
 							counter <= counter - 1;
