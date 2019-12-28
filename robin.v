@@ -156,8 +156,37 @@ module top(
 		.dout		(ram_data_out)
 	);
 
+	// transmitting fifo
+	reg fifo_out_read, fifo_out_write;
+	reg [7:0] fifo_out_data_in;
+	wire [7:0] fifo_out_data_out;
+	wire fifo_out_full;
+	wire fifo_out_empty;
 
-	// transfer incoming bytes to the fifo
+	fifo #(.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH)) 
+	fifo_out(
+		.clk(CLK),
+		.reset_n(reset),
+		.fifo_write(fifo_out_write),
+		.fifo_data_in(fifo_out_data_in),
+		.fifo_read(fifo_out_read),
+		.fifo_data_out(fifo_out_data_out),
+		.full(fifo_out_full),
+		.empty(fifo_out_empty)
+	);
+
+	// memory mapped serial transmit: write on address 0x100 will store byyte in output fifo
+	wire output_available = (cpu_waddr == 256) & cpu_write;
+	always @(posedge CLK) begin
+		fifo_out_write <= 0;
+		if(output_available)
+		begin
+			fifo_out_data_in <= cpu_data_in;
+			fifo_out_write <= 1;
+		end
+	end
+
+	// transfer incoming bytes to the fifo 
 	reg receiving = 0;
 	always @(posedge CLK) begin
 		fifo_in_write <= 0;
@@ -181,14 +210,8 @@ module top(
 	// exec: run program and load word into lower two bytes of memory
 	//		03 <addr> <word>
 
-	// monitor state, reflected in the green leds for debugging
+	// monitor state
 	reg [3:0] state = FLUSH;
-	always @(posedge CLK) begin
-		LED2 <= state[0];
-		LED3 <= state[1];
-		LED4 <= state[2];
-		LED5 <= state[3];
-	end
 
 	// control registers for the load and dump operations
 	reg [7:0] bytes[6]; // cmd, adr1, adr2, adr3, len1, len2
@@ -218,6 +241,7 @@ module top(
 	reg [15:0] counter;
 	always @(posedge CLK) begin
 		fifo_in_read <= 0;
+		fifo_out_read <= 0;
 		u_transmit <= 0;
 		mem_write <= 0;
 		cpu_reset <= 0;
@@ -228,8 +252,17 @@ module top(
 		end
 		case(state)
 			FLUSH:  begin
-						if(~fifo_in_empty)
+						if(counter)
+							counter <= counter -1;
+						else if(~fifo_in_empty)
 							fifo_in_read <= 1;
+						else if(~fifo_out_empty & ~u_is_transmitting)
+							begin
+								u_tx_byte <= fifo_out_data_out;
+								fifo_out_read <= 1;
+								u_transmit <= 1;
+								counter <= DUMPWAIT;
+							end
 						else
 							state <= START;
 					end
@@ -325,12 +358,27 @@ module top(
 						running <= 1;
 						cpu_reset <= 1;
 						state <= RUN0;
+						LED1 <= 0;
 					end
-			RUN0:	state <= RUNNING;
-			RUNNING:begin // add memory mapped io later
+			RUN0:	begin
+						state <= RUNNING;
+						counter <= DUMPWAIT;
+					end
+			RUNNING:begin
 						if(cpu_halted) begin
 							running <= 0;
 							state <= FLUSH;
+							LED1 <= 1;
+						end
+						if(counter)
+							counter <= counter - 1;
+						else begin
+							if(~fifo_out_empty & ~u_is_transmitting) begin
+								u_tx_byte <= fifo_out_data_out;
+								fifo_out_read <= 1;
+								u_transmit <= 1;
+							end
+							counter <= DUMPWAIT;
 						end
 					end
 			default: state <= FLUSH;
