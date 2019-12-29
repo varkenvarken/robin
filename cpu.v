@@ -117,6 +117,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	localparam CMD_LOADB   =  4;
 	localparam CMD_LOADW   =  5;
 	localparam CMD_LOADL   =  6;
+	localparam CMD_LOADIL  =  7;
 	localparam CMD_STORB   =  8;
 	localparam CMD_STORW   =  9;
 	localparam CMD_STORL   = 10;
@@ -206,6 +207,11 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 												end
 									CMD_LOADL:	begin
 													mem_raddr <= sumr1r0_addr;
+													state <= LOADLw;
+												end
+									CMD_LOADIL: begin
+													mem_raddr <= r[15];
+													r[15] <= r[15] + 4;
 													state <= LOADLw;
 												end
 									CMD_STORB:	begin
