@@ -46,7 +46,7 @@ module top(
 	reg reset = 0;
 	always @(posedge CLK) reset <= 1;	// replace later with for example ~u_error to reset on break or on some button press
 
-	localparam FIFO_ADDR_WIDTH = 4;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
+	localparam FIFO_ADDR_WIDTH = 8;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
 	localparam LOWMEM_ADDR_WIDTH = 13;	// this gives us of 2¹³ == 8K bytes
 	localparam DUMPWAIT = 16'hfff;		// additional wait time between sending chars (approx. .3 milliseconds) because u_is_transmitting not reliable)
 
