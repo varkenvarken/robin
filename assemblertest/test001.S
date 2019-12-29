@@ -2,8 +2,12 @@
 	jal 0,link,0
 #end
 #define pop x
-	loadl ${x},sp,0 ; not yet correct!
-	halt
+	loadl ${x},sp,0
+	mover sp,sp,1
+#end
+#define and z,x,y
+	load aluop,#alu_and
+	alu ${z},${x},${y}
 #end
 
 start: 0x200
@@ -20,6 +24,7 @@ start: 0x200
 	load r12,#string2
 	ret
 	pop r4
+	and r5,r6,r7
 bytes:
 	byte 1,2,3,4,5
 string:

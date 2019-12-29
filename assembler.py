@@ -31,16 +31,18 @@ import sys
 # JUMP  R2,R1,R0     registers
 # HALT               implied
 # MARK  R2           register
+# MOVER R2,R1,idx    regsidx
 
 class Opcode:
 	def __init__(self, name, desc='',
-			registers=None, register=None, implied=None, immediate=None, longimmediate=None, relative=None, 
+			registers=None, register=None, regsidx=None, implied=None, immediate=None, longimmediate=None, relative=None, 
 			data=False, bytes=True, words=False, longs=False, addzero=True,
 			userdefined=None, parameters=[]):
 		self.name = name.upper()
 		self.desc = desc
 		self.registers = registers
 		self.register = register
+		self.regsidx = regsidx
 		self.implied = implied
 		self.immediate = immediate
 		self.longimmediate = longimmediate
@@ -92,6 +94,12 @@ class Opcode:
 			for v in values:
 				if v<0 or v>15: raise ValueError("register not in range [0:15]") 
 			return (self.register * 256 + values[0]*256).to_bytes(2,'big')
+		elif self.regsidx is not None:
+			if(len(values) != 3): raise ValueError("register index mode takes 3 values")
+			for v in values[:2]:
+				if v<0 or v>15: raise ValueError("register not in range [0:15]")
+			if values[2]<-8 or values[2]>7: raise ValueError("index not in range [-8:7]")
+			return (self.regsidx * 256 + values[0]*256 + values[1]*16 + values[2] if values[2] >= 0 else 16+values[2] ).to_bytes(2,'big')
 		elif self.data:
 			if type(values[0]) == str and self.bytes:
 				values = bytes(values[0],'UTF-8')
@@ -213,6 +221,8 @@ opcode_list = [
 	 register=0xf0),
   Opcode(name='HALT', desc='halt and dump registers at 0x0002',
 	 implied=0xffff),
+  Opcode(name='MOVER', desc='MOVE R2 <- R1+extend(4*r0)',
+	 regsidx=0x30),
 
   Opcode(name='BYTE', desc='define byte values (comma separated or string)',
 	 data=True, bytes=True , words=False, longs=False, addzero=False), 
@@ -248,11 +258,18 @@ def assemble(lines, debug=False):
 	errors = 0
 	# pass1 determine label addresses
 	labels={  # predefined labels for register names/aliases
-		'R0':0, 'R1':1, 'R2':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
+		'R0':0, 'R1':1, 'R2':2, 'TMP':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
 		'R9':9, 'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15,
 		'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
 		'r9':9, 'r10':10, 'r11':11, 'r12':12, 'r13':13, 'r14':14, 'r15':15,
-		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'link':12, 'LINK':12,
+		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'aluop':13, 'ALUOP':13,'link':12, 'LINK':12,
+		'TMP2':3, 'TMP':2, 'RESULT':4,
+		# predefined labels for alu operations, lower case only
+		'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
+		'alu_and': 4, 'alu_or' : 5, 'alu_xor': 6, 'alu_not': 7,
+		'alu_neg': 8, 'alu_tst': 9,
+		'alu_shiftl':12, 'alu_shiftr':13,
+		'alu_mul16':16, 'alu_mul32lo':17, 'alu_mul32hi':18,
 	}
 	addr=0
 	processed_lines = []
