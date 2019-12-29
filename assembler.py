@@ -269,7 +269,7 @@ def assemble(lines, debug=False):
 		# predefined labels for alu operations, lower case only
 		'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
 		'alu_and': 4, 'alu_or' : 5, 'alu_xor': 6, 'alu_not': 7,
-		'alu_neg': 8, 'alu_tst': 9,
+		'alu_cmp': 8, 'alu_tst': 9,
 		'alu_shiftl':12, 'alu_shiftr':13,
 		'alu_mul16':16, 'alu_mul32lo':17, 'alu_mul32hi':18,
 	}
