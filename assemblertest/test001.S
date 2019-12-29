@@ -1,3 +1,11 @@
+#define ret
+	jal 0,link,0
+#end
+#define pop x
+	loadl ${x},sp,0 ; not yet correct!
+	halt
+#end
+
 start: 0x200
 	move r3,r4,r5
 	move r6,r7,r8
@@ -10,6 +18,8 @@ start: 0x200
 	halt
 	load r12,#0x12345678
 	load r12,#string2
+	ret
+	pop r4
 bytes:
 	byte 1,2,3,4,5
 string:

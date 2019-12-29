@@ -36,21 +36,25 @@ class Opcode:
 	def __init__(self, name, desc='',
 			registers=None, register=None, implied=None, immediate=None, longimmediate=None, relative=None, 
 			data=False, bytes=True, words=False, longs=False, addzero=True,
-			userdefined=None):
-		 self.name = name.upper()
-		 self.desc = desc
-		 self.registers = registers
-		 self.register = register
-		 self.implied = implied
-		 self.immediate = immediate
-		 self.longimmediate = longimmediate
-		 self.relative = relative
-		 self.data = data
-		 self.bytes = bytes
-		 self.words = words
-		 self.longs = longs
-		 self.addzero = addzero
-		 self.userdefined = userdefined
+			userdefined=None, parameters=[]):
+		self.name = name.upper()
+		self.desc = desc
+		self.registers = registers
+		self.register = register
+		self.implied = implied
+		self.immediate = immediate
+		self.longimmediate = longimmediate
+		self.relative = relative
+		self.data = data
+		self.bytes = bytes
+		self.words = words
+		self.longs = longs
+		self.addzero = addzero
+		self.userdefined = userdefined
+		self.parameters = parameters
+
+	def __str__(self):
+		return self.name
 
 	def code(self, operand, address, labels):
 		immediate = False
@@ -113,7 +117,6 @@ class Opcode:
 	@staticmethod
 	def bytevalue_int(v):
 		if type(v) == str:
-			print('aaaa',v)
 			v = ord(v)
 		if v < -128 or v > 255:
 			raise ValueError()
@@ -256,6 +259,7 @@ def assemble(lines, debug=False):
 	lineno = 1
 	deflines = None
 	defop = None
+	parameters = []
 	while len(lines):
 		filename, linenumber, line = lines.pop(0)
 		line = stripcomment(line).strip()
@@ -266,11 +270,12 @@ def assemble(lines, debug=False):
 
 			if deflines is not None:
 				if op == '#end':
-					opcodes[defop] = Opcode(name=defop, userdefined=deflines)
+					opcodes[defop] = Opcode(name=defop, userdefined=deflines, parameters=parameters)
 					deflines = None
 					defop = None
+					parameters = None
 				else:
-					deflines.append((filename, linenumber, line))
+					deflines.append([filename, linenumber, line])
 				continue
 
 			if op.endswith(':') or op.endswith('='):
@@ -287,20 +292,35 @@ def assemble(lines, debug=False):
 					except:  #ignore undefined in the first pass
 						pass
 			elif op.startswith('#define'):
-				defop = operand  # should check for non empty and not yet present
+				elements  = [o.strip() for o in operand.split(None,1)]
+				defop = elements[0].upper()  # should check for non empty and not yet present
+				if len(elements) > 1:
+					parameters = [p.strip() for p in elements[1].split(',')]
 				deflines = list()
 				continue
 			else:
 				try:
 					opcode = opcodes[op.upper()]
 					if opcode.userdefined != None:
+						if operand == '':
+							ops = []
+						else:
+							ops = [p.strip() for p in operand.split(',')]
+						if len(ops) != len(opcode.parameters):
+							#print(ops,len(ops),len(opcode.parameters),file=sys.stderr)
+							raise ValueError()
 						for ul in reversed(opcode.userdefined):
+							for par,val in zip(opcode.parameters,ops):
+								ul[2] = ul[2].replace("${"+par+"}",val)
 							lines.insert(0,ul)
 						continue
 					else:
 						addr+=opcode.length(operand, labels)  # this does also cover byte,byte0 and word,word0,long,long0 directives
 				except KeyError:
 					print("Error: %s[%d] unknown opcode %s"%(filename, linenumber, op), file=sys.stderr)
+					continue
+				except ValueError:
+					print("Error: %s[%d] number of parameters does not match for user defined opcode %s"%(filename, linenumber, op), file=sys.stderr)
 					continue
 		processed_lines.append((filename, linenumber, line))
 
