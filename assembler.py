@@ -186,13 +186,15 @@ class Opcode:
 						values = [eval(op,globals(),labels) for op in values]
 						v = self.bytevalue_int(values[1])
 						return 2
-					except (ValueError, NameError):
+					except:
 						return 6
 			return 2
 
 opcode_list = [
   Opcode(name='MOVE', desc='MOVE R2 <- R1+R0',
 	 registers=0x00),
+  Opcode(name='ALU', desc='MOVE R2 <- R1 aluop R0',
+	 registers=0x20),
   Opcode(name='LOAD', desc='MOVE R2 <- (R1+R0)b | #val',
 	 registers=0x40, immediate=0xc0, longimmediate=0x70),
   Opcode(name='LOADW', desc='MOVE R2 <- (R1+R0)w',
@@ -280,66 +282,70 @@ def assemble(lines, debug=False):
 	while len(lines):
 		filename, linenumber, line = lines.pop(0)
 		line = stripcomment(line).strip()
-		if line != '':
-			elements = line.split(None,1)
-			op = elements[0]
-			operand = elements[1] if len(elements) > 1 else ''
+		try:
+			if line != '':
+				elements = line.split(None,1)
+				op = elements[0]
+				operand = elements[1] if len(elements) > 1 else ''
 
-			if deflines is not None:
-				if op == '#end':
-					opcodes[defop] = Opcode(name=defop, userdefined=deflines, parameters=parameters)
-					deflines = None
-					defop = None
-					parameters = []
-				else:
-					deflines.append([filename, linenumber, line])
-				continue
+				if deflines is not None:
+					if op == '#end':
+						opcodes[defop] = Opcode(name=defop, userdefined=deflines, parameters=parameters)
+						deflines = None
+						defop = None
+						parameters = []
+					else:
+						deflines.append([filename, linenumber, line])
+					continue
 
-			if op.endswith(':') or op.endswith('='):
-				constant = op.endswith('=')
-				label=op[:-1]
-				if label in labels: warning('%s[%d]redefined label'%(filename,linenumber))
-				if operand == '':
-					if constant: warning('%s[%d]empty constant definition, default to addr'%(filename,linenumber))
-					labels[label]=addr  # implicit label definition
+				if op.endswith(':') or op.endswith('='):
+					constant = op.endswith('=')
+					label=op[:-1]
+					if label in labels: warning('%s[%d]redefined label'%(filename,linenumber))
+					if operand == '':
+						if constant: warning('%s[%d]empty constant definition, default to addr'%(filename,linenumber))
+						labels[label]=addr  # implicit label definition
+					else:
+						try:
+							addr=eval(operand,globals(),labels)
+							labels[label]=addr  # explicit label definition
+						except:  #ignore undefined in the first pass
+							pass
+				elif op.startswith('#define'):
+					elements  = [o.strip() for o in operand.split(None,1)]
+					defop = elements[0].upper()  # should check for non empty and not yet present
+					if len(elements) > 1:
+						parameters = [p.strip() for p in elements[1].split(',')]
+					deflines = list()
+					continue
 				else:
 					try:
-						addr=eval(operand,globals(),labels)
-						labels[label]=addr  # explicit label definition
-					except:  #ignore undefined in the first pass
-						pass
-			elif op.startswith('#define'):
-				elements  = [o.strip() for o in operand.split(None,1)]
-				defop = elements[0].upper()  # should check for non empty and not yet present
-				if len(elements) > 1:
-					parameters = [p.strip() for p in elements[1].split(',')]
-				deflines = list()
-				continue
-			else:
-				try:
-					opcode = opcodes[op.upper()]
-					if opcode.userdefined != None:
-						if operand == '':
-							ops = []
+						opcode = opcodes[op.upper()]
+						if opcode.userdefined != None:
+							if operand == '':
+								ops = []
+							else:
+								ops = [p.strip() for p in operand.split(',')]
+							if len(ops) != len(opcode.parameters):
+								#print(ops,len(ops),len(opcode.parameters),file=sys.stderr)
+								raise ValueError()
+							for fname,fno,l in reversed(opcode.userdefined):
+								#print('aaaa',l,file=sys.stderr)
+								for par,val in zip(opcode.parameters,ops):
+									l = l.replace("${"+par+"}",val)
+								lines.insert(0,(fname,fno,l))
+							continue
 						else:
-							ops = [p.strip() for p in operand.split(',')]
-						if len(ops) != len(opcode.parameters):
-							#print(ops,len(ops),len(opcode.parameters),file=sys.stderr)
-							raise ValueError()
-						for fname,fno,l in reversed(opcode.userdefined):
-							#print('aaaa',l,file=sys.stderr)
-							for par,val in zip(opcode.parameters,ops):
-								l = l.replace("${"+par+"}",val)
-							lines.insert(0,(fname,fno,l))
+							#print(opcode,operand,file=sys.stderr)
+							addr+=opcode.length(operand, labels)  # this does also cover byte,byte0 and word,word0,long,long0 directives
+					except KeyError:
+						print("Error: %s[%d] unknown opcode %s"%(filename, linenumber, op), file=sys.stderr)
 						continue
-					else:
-						addr+=opcode.length(operand, labels)  # this does also cover byte,byte0 and word,word0,long,long0 directives
-				except KeyError:
-					print("Error: %s[%d] unknown opcode %s"%(filename, linenumber, op), file=sys.stderr)
-					continue
-				except ValueError:
-					print("Error: %s[%d] number of parameters does not match for user defined opcode %s"%(filename, linenumber, op), file=sys.stderr)
-					continue
+					except ValueError:
+						print("Error: %s[%d] number of parameters does not match for user defined opcode %s"%(filename, linenumber, op), file=sys.stderr)
+						continue
+		except Exception as e:
+			raise e
 		processed_lines.append((filename, linenumber, line))
 
 	#pass 2, label bit is the same except we generate errors when we cannot resolve
