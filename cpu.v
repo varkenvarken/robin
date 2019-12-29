@@ -103,6 +103,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 	wire [3:0] R0  = instruction[ 3: 0]; // source register 0
 	wire writable_destination = R2 > 1;	 // r0 and r1 are fixed at 0 and 1 respectively
 	wire [7:0] immediate = instruction[7:0];
+	wire [31:0] r1_offset = r[R1] + {{26{R0[3]}},R0,2'b00};  // sign extended offset * 4
 
 	// branch logic
 	wire [31:0] relative = {{24{immediate[7]}},immediate}; // 8 bit sign extended to 32
@@ -114,6 +115,7 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 
 	localparam CMD_MOVEP   =  0;
 	localparam CMD_ALU     =  2;
+	localparam CMD_MOVER   =  3;
 	localparam CMD_LOADB   =  4;
 	localparam CMD_LOADW   =  5;
 	localparam CMD_LOADL   =  6;
@@ -196,6 +198,9 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 													r[13][28] <= alu_carry_out;
 													r[13][29] <= alu_is_zero;
 													r[13][30] <= alu_is_negative;
+												end
+									CMD_MOVER:	begin
+													if(writable_destination) r[R2] <= r1_offset;
 												end
 									CMD_LOADB:	begin
 													mem_raddr <= sumr1r0_addr;
