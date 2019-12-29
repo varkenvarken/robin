@@ -8,3 +8,11 @@ start: 0x200
 	jal link,r7,0
 	mark r7
 	halt
+	load r12,#0x12345678
+	load r12,#string2
+bytes:
+	byte 1,2,3,4,5
+string:
+	byte0 "Jaap Aap rulez!"
+string2:
+	byte0 "Jaap Aap rulez forever!"

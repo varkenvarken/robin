@@ -34,22 +34,22 @@ import sys
 
 class Opcode:
 	def __init__(self, name, desc='',
-			registers=None, register=None, implied=None, immediate=None, relative=None, 
+			registers=None, register=None, implied=None, immediate=None, longimmediate=None, relative=None, 
 			data=False, bytes=True, words=False, longs=False, addzero=True,
-			compound=None, userdefined=None):
+			userdefined=None):
 		 self.name = name.upper()
 		 self.desc = desc
 		 self.registers = registers
 		 self.register = register
 		 self.implied = implied
 		 self.immediate = immediate
+		 self.longimmediate = longimmediate
 		 self.relative = relative
 		 self.data = data
 		 self.bytes = bytes
 		 self.words = words
 		 self.longs = longs
 		 self.addzero = addzero
-		 self.compound = compound
 		 self.userdefined = userdefined
 
 	def code(self, operand, address, labels):
@@ -59,14 +59,19 @@ class Opcode:
 		else:
 			values = [op.strip() for op in operand.split(',')]
 			if len(values) > 1 and values[1].startswith('#'):
-			    immediate = True
-			    values[1] = values[1][1:]
+				immediate = True
+				values[1] = values[1][1:]
 			values = [eval(op,globals(),labels) for op in values]
 		if immediate:
-			if self.immediate is None: raise NotImplementedError("%s does not support an immediate mode"%self.name)
+			if self.immediate is None and self.longimmediate is None: raise NotImplementedError("%s does not support an immediate mode"%self.name)
 			if(len(values) != 2): raise ValueError("immediate mode takes 2 arguments")
 			if values[0] < 0 or values[0] > 15: raise ValueError("register not in range [0:15]")
-			return (self.immediate * 256 + values[0] * 256 + self.bytevalue_int(values[1]) ).to_bytes(2,'big')# checks if value fits 8 bit -128 : 255
+			try:
+				v = self.bytevalue_int(values[1])
+				return (self.immediate * 256 + values[0] * 256 + v ).to_bytes(2,'big')# checks if value fits 8 bit -128 : 255
+			except ValueError:
+				vbytes = self.longvalue(values[1])
+				return (self.longimmediate * 256 + values[0] * 256).to_bytes(2,'big') + vbytes # checks if value fits 32 bits
 		elif self.implied is not None:
 			if values is not None: raise NotImplementedError("%s is implied and does not take an operand"%self.name)
 			return self.implied.to_bytes(2,'big')
@@ -76,21 +81,20 @@ class Opcode:
 		elif self.registers is not None:
 			if(len(values) != 3): raise ValueError("registers mode takes 3 values")
 			for v in values:
-			    if v<0 or v>15: raise ValueError("register not in range [0:15]") 
+				if v<0 or v>15: raise ValueError("register not in range [0:15]") 
 			return (self.registers * 256 + values[0]*256 + values[1]*16 + values[2] ).to_bytes(2,'big')
 		elif self.register is not None:
 			if(len(values) != 1): raise ValueError("register mode takes 1 value")
 			for v in values:
-			    if v<0 or v>15: raise ValueError("register not in range [0:15]") 
+				if v<0 or v>15: raise ValueError("register not in range [0:15]") 
 			return (self.register * 256 + values[0]*256).to_bytes(2,'big')
 		elif self.data:
-			if type(value) == str and self.bytes:
-				values = bytes(value,'UTF-8')
+			if type(values[0]) == str and self.bytes:
+				values = bytes(values[0],'UTF-8')
 				if self.addzero:
 					values += b'\0'
 				return values
 			else:
-				values = [eval(v, globals(), labels) for v in operand.split(',')]
 				if self.addzero:
 					values.append(0)
 				if self.bytes:
@@ -109,6 +113,7 @@ class Opcode:
 	@staticmethod
 	def bytevalue_int(v):
 		if type(v) == str:
+			print('aaaa',v)
 			v = ord(v)
 		if v < -128 or v > 255:
 			raise ValueError()
@@ -147,9 +152,9 @@ class Opcode:
 			raise ValueError(v)
 		return v
 
-	def length(self, operand):
+	def length(self, operand,labels):
 		if self.data:
-			if operand.strip().startswith('"'):
+			if operand.strip().startswith('"') or operand.strip().startswith('\''):
 				nvalues = len(bytes(eval(operand),encoding='UTF-8'))
 			else:
 				nvalues = len(operand.split(','))
@@ -162,52 +167,62 @@ class Opcode:
 			elif self.longs:
 				return nvalues * 4
 		else:
+			if operand != '':
+				values = [op.strip() for op in operand.split(',')]
+				if len(values) > 1 and values[1].startswith('#'):
+					values[1] = values[1][1:]
+					try:  # could also fail on a forward label reference in which case we assume an address ref and therefore a long
+						values = [eval(op,globals(),labels) for op in values]
+						v = self.bytevalue_int(values[1])
+						return 2
+					except (ValueError, NameError):
+						return 6
 			return 2
 
 opcode_list = [
   Opcode(name='MOVE', desc='MOVE R2 <- R1+R0',
-     registers=0x00),
+	 registers=0x00),
   Opcode(name='LOAD', desc='MOVE R2 <- (R1+R0)b | #val',
-     registers=0x40, immediate=0xc0),
+	 registers=0x40, immediate=0xc0, longimmediate=0x70),
   Opcode(name='LOADW', desc='MOVE R2 <- (R1+R0)w',
-     registers=0x50, immediate=0xc0),
+	 registers=0x50, immediate=0xc0),
   Opcode(name='LOADL', desc='MOVE R2 <- (R1+R0)l',
-     registers=0x60, immediate=0xc0),
+	 registers=0x60, immediate=0xc0),
   Opcode(name='STOR', desc='MOVE R2 -> (R1+R0)b',
-     registers=0x80),
+	 registers=0x80),
   Opcode(name='STORW', desc='MOVE R2 -> (R1+R0)w',
-     registers=0x90),
+	 registers=0x90),
   Opcode(name='STORL', desc='MOVE R2 -> (R1+R0)l',
-     registers=0xa0),
+	 registers=0xa0),
   Opcode(name='BRA', desc='BRA always address expression',
-     relative=0xdc),
+	 relative=0xdc),
   Opcode(name='BRM', desc='BRA if minus address expression',
-     relative=0xda),
+	 relative=0xda),
   Opcode(name='BRP', desc='BRA if pos address expression',
-     relative=0xd2),
+	 relative=0xd2),
   Opcode(name='BEQ', desc='BRA if zero address expression',
-     relative=0xd9),
+	 relative=0xd9),
   Opcode(name='BNE', desc='Branch if not zero address expression',
-     relative=0xd1),
+	 relative=0xd1),
   Opcode(name='JAL', desc='R2 <- PC;  PC <- R1+R0',
-     registers=0xe0),
+	 registers=0xe0),
   Opcode(name='MARK', desc='R2 <- counter',
-     register=0xf0),
+	 register=0xf0),
   Opcode(name='HALT', desc='halt and dump registers at 0x0002',
-     implied=0xffff),
+	 implied=0xffff),
 
   Opcode(name='BYTE', desc='define byte values (comma separated or string)',
-     data=True, bytes=True , words=False, longs=False, addzero=False), 
+	 data=True, bytes=True , words=False, longs=False, addzero=False), 
   Opcode(name='BYTE0', desc='define byte values + extra nul (comma separated or string)',
-     data=True, bytes=True , words=False, longs=False, addzero=True), 
+	 data=True, bytes=True , words=False, longs=False, addzero=True), 
   Opcode(name='WORD', desc='define word values (comma separated)',
-     data=True, bytes=False, words=True , longs=False, addzero=False), 
+	 data=True, bytes=False, words=True , longs=False, addzero=False), 
   Opcode(name='WORD0', desc='define word values + extra nul (comma separated)',
-     data=True, bytes=False, words=True , longs=False, addzero=True), 
+	 data=True, bytes=False, words=True , longs=False, addzero=True), 
   Opcode(name='LONG', desc='define long word values (comma separated)',
-     data=True, bytes=False, words=False, longs=True , addzero=False), 
+	 data=True, bytes=False, words=False, longs=True , addzero=False), 
   Opcode(name='LONG0', desc='define long word values + extra nul (comma separated)',
-     data=True, bytes=False, words=False, longs=True , addzero=True), 
+	 data=True, bytes=False, words=False, longs=True , addzero=True), 
 ]
 
 opcodes = {op.name:op for op in opcode_list}
@@ -230,11 +245,11 @@ def assemble(lines, debug=False):
 	errors = 0
 	# pass1 determine label addresses
 	labels={  # predefined labels for register names/aliases
-	    'R0':0, 'R1':1, 'R2':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
-	    'R9':9, 'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15,
-	    'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
-	    'r9':9, 'r10':10, 'r11':11, 'r12':12, 'r13':13, 'r14':14, 'r15':15,
-	    'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'link':12, 'LINK':12,
+		'R0':0, 'R1':1, 'R2':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
+		'R9':9, 'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15,
+		'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
+		'r9':9, 'r10':10, 'r11':11, 'r12':12, 'r13':13, 'r14':14, 'r15':15,
+		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'link':12, 'LINK':12,
 	}
 	addr=0
 	processed_lines = []
@@ -283,7 +298,7 @@ def assemble(lines, debug=False):
 							lines.insert(0,ul)
 						continue
 					else:
-						addr+=opcode.length(operand)  # this does also cover byte,byte0 and word,word0,long,long0 directives
+						addr+=opcode.length(operand, labels)  # this does also cover byte,byte0 and word,word0,long,long0 directives
 				except KeyError:
 					print("Error: %s[%d] unknown opcode %s"%(filename, linenumber, op), file=sys.stderr)
 					continue
