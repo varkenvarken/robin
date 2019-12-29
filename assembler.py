@@ -99,7 +99,7 @@ class Opcode:
 			for v in values[:2]:
 				if v<0 or v>15: raise ValueError("register not in range [0:15]")
 			if values[2]<-8 or values[2]>7: raise ValueError("index not in range [-8:7]")
-			return (self.regsidx * 256 + values[0]*256 + values[1]*16 + values[2] if values[2] >= 0 else 16+values[2] ).to_bytes(2,'big')
+			return (self.regsidx * 256 + values[0]*256 + values[1]*16 + (values[2] if values[2] >= 0 else 16+values[2]) ).to_bytes(2,'big')
 		elif self.data:
 			if type(values[0]) == str and self.bytes:
 				values = bytes(values[0],'UTF-8')
@@ -263,7 +263,7 @@ def assemble(lines, debug=False):
 		'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
 		'r9':9, 'r10':10, 'r11':11, 'r12':12, 'r13':13, 'r14':14, 'r15':15,
 		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'aluop':13, 'ALUOP':13,'link':12, 'LINK':12,
-		'TMP2':3, 'TMP':2, 'RESULT':4,
+		'TMP2':3, 'TMP':2, 'RESULT':4,'tmp2':3, 'tmp':2, 'result':4,
 		# predefined labels for alu operations, lower case only
 		'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
 		'alu_and': 4, 'alu_or' : 5, 'alu_xor': 6, 'alu_not': 7,
@@ -290,7 +290,7 @@ def assemble(lines, debug=False):
 					opcodes[defop] = Opcode(name=defop, userdefined=deflines, parameters=parameters)
 					deflines = None
 					defop = None
-					parameters = None
+					parameters = []
 				else:
 					deflines.append([filename, linenumber, line])
 				continue
@@ -326,10 +326,11 @@ def assemble(lines, debug=False):
 						if len(ops) != len(opcode.parameters):
 							#print(ops,len(ops),len(opcode.parameters),file=sys.stderr)
 							raise ValueError()
-						for ul in reversed(opcode.userdefined):
+						for fname,fno,l in reversed(opcode.userdefined):
+							#print('aaaa',l,file=sys.stderr)
 							for par,val in zip(opcode.parameters,ops):
-								ul[2] = ul[2].replace("${"+par+"}",val)
-							lines.insert(0,ul)
+								l = l.replace("${"+par+"}",val)
+							lines.insert(0,(fname,fno,l))
 						continue
 					else:
 						addr+=opcode.length(operand, labels)  # this does also cover byte,byte0 and word,word0,long,long0 directives
@@ -346,7 +347,7 @@ def assemble(lines, debug=False):
 	addr=0
 	lines = processed_lines
 	for filename, linenumber, line in lines:
-		if debug : dline = "%s[%3d] %s"%(filename, linenumber, line.strip())
+		if debug : dline = "%-40s[%3d] %s"%(filename, linenumber, line.strip())
 		line = stripcomment(line).strip()
 		if line == '': continue
 		elements = line.split(None,1)
