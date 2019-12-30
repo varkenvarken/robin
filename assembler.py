@@ -374,7 +374,7 @@ def assemble(lines, debug=False):
 				if not constant:		# only labels update the current address and may fill intermediate space
 					fill = newaddr - addr
 					if fill < 0:
-						warning('%s[%d]label %s defined to be at lower address than current'%(filename,linenumber,label))
+						print('warning: %s[%d]label %s defined to be at lower address than current'%(filename,linenumber,label), file=sys.stderr)
 					else:
 						code.extend([0] * fill)
 						addr = newaddr
