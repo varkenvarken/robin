@@ -410,39 +410,75 @@ class Monitor(cmd.Cmd):
 
 	def do_file(self, line):
 		"""
-		file <filename>    load binary contents of <filename> into mem at $0000
+		file <filename>   [--hex]  load binary contents of <filename> into mem at $0000
 		"""
 		self.flush()
 		args = line.strip().split()
-		try:
-			with open(args[0], 'rb') as f:
-				hexbytes = f.read()
-				length = len(hexbytes)
-		except FileNotFoundError:
-			print("file not found")
-			return False
-		addr = 0
-		chunk = 63
-		while length > chunk:
-			data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
-			self.ser.write(bytes(data))
-			self.wait(0.1)
-			self.flush(len(data))
-			send = hexbytes[addr:addr+chunk]
-			self.ser.write(send)
-			self.wait(0.1)
-			self.flush(len(send))
-			addr += chunk
-			length -= chunk
-		if length > 0:
-			data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((length >> 8) & 255), ((length) & 255)]
-			self.ser.write(bytes(data))
-			self.wait(0.1)
-			self.flush(len(data))
-			send = hexbytes[addr:addr+length]
-			self.ser.write(send)
-			self.wait(0.1)
-			self.flush(len(send))
+		if args[0] == '--hex' or args[0] == 'x':
+			try:
+				with open(args[1], 'r') as f:
+					for line in f.readlines():
+						if line.startswith(':'):
+							line = line[1:].strip()
+							length = len(line)
+							if length % 2:
+								print("format error", line)
+								return False
+							values = [int(line[c:c+2],16) for c in range(0,length,2)]
+							if sum(values) & 255 :
+								print("checksum error", line)
+								return False
+							if values[3] == 1 :
+								break  # end of file, we're done
+							elif values[3] != 0:
+								print("cannot process record type", line)
+							else:  # a data record
+								addr = values[1] * 256 + values[2]
+								chunk = values[0]
+								data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
+								self.ser.write(bytes(data))
+								self.wait(0.1)
+								self.flush(len(data))
+								send = values[4:-1]
+								self.ser.write(send)
+								self.wait(0.1)
+								self.flush(len(send))
+					else:
+						print("not a hex file")
+						return False
+			except FileNotFoundError:
+				print("file not found")
+				return False
+		else:
+			try:
+				with open(args[0], 'rb') as f:
+					hexbytes = f.read()
+					length = len(hexbytes)
+			except FileNotFoundError:
+				print("file not found")
+				return False
+			addr = 0
+			chunk = 63
+			while length > chunk:
+				data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
+				self.ser.write(bytes(data))
+				self.wait(0.1)
+				self.flush(len(data))
+				send = hexbytes[addr:addr+chunk]
+				self.ser.write(send)
+				self.wait(0.1)
+				self.flush(len(send))
+				addr += chunk
+				length -= chunk
+			if length > 0:
+				data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((length >> 8) & 255), ((length) & 255)]
+				self.ser.write(bytes(data))
+				self.wait(0.1)
+				self.flush(len(data))
+				send = hexbytes[addr:addr+length]
+				self.ser.write(send)
+				self.wait(0.1)
+				self.flush(len(send))
 		if not self.scriptmode: print('ok')
 		return False
 

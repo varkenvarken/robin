@@ -401,11 +401,35 @@ def assemble(lines, debug=False):
 	# return results as bytes
 	return code, labels, errors
 
+def printrun(addr,code):
+	for start in range(0,len(code),128):  # chunks of max 128 bytes (we could go to 255)
+		chunk = code[start:start+128]
+		nbytes = len(chunk)
+		values = [nbytes,(addr+start)>>8,(addr+start)&255,0] + [int(b) for b in chunk]
+		values.append( ((sum(values) & 255) ^ 255) + 1 )
+		print(":" + "".join(["%02x"%v for v in values]))
+
+def printhex(code):
+	start = 0
+	while start < len(code):
+		startzero = start
+		while start < len(code) and code[start] == 0: start += 1
+		if start < len(code):
+			end = start
+			while end < len(code) and code[end] > 0: end += 1
+			if start - startzero < 17:
+				printrun(startzero,code[startzero:end])
+			else:
+				printrun(start,code[start:end])
+			start = end
+	print(":00000001FF")
+
 if __name__ == '__main__':
 	parser = ArgumentParser()
 	parser.add_argument('-l', '--labels', help='print list of labels to stderr', action="store_true")
 	parser.add_argument('-u', '--usage', help='show allowed syntax and exit', action="store_true")
 	parser.add_argument('-d', '--debug', help='dump internal code representation', action="store_true")
+	parser.add_argument('-x', '--hex', help='produce output in Intel HEX format', action="store_true")
 	parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
 	args = parser.parse_args()
 
@@ -427,13 +451,16 @@ if __name__ == '__main__':
 			print("%-20s %04x"%(label,labels[label]), file=sys.stderr)
 
 	if errors == 0:
-		nbytes = len(code)
-		start = 0
-		end = 63
-		while end <= nbytes:
-			sys.stdout.buffer.write(code[start:end])
-			start = end
-			end += 63
-		sys.stdout.buffer.write(code[start:nbytes])
+		if args.hex:
+			printhex(code)
+		else:
+			nbytes = len(code)
+			start = 0
+			end = 63  # a fairly arbitrary chunk size
+			while end <= nbytes:
+				sys.stdout.buffer.write(code[start:end])
+				start = end
+				end += 63
+			sys.stdout.buffer.write(code[start:nbytes])
 
 	sys.exit(errors > 0)
