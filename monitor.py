@@ -279,7 +279,7 @@ class Monitor(cmd.Cmd):
 
 	def do_dumps(self, line):
 		"""
-		dumps <hexaddr> [<length>]          dump string (max <length> bytes or 48 bytes if omitted)
+		dumps <hexaddr> [<length>]          dump string (max <length> bytes or 48 bytes if omitted) Will not show chars after \0
 		"""
 		self.flush()
 		addr = self.splitdump(line)
@@ -291,10 +291,18 @@ class Monitor(cmd.Cmd):
 		self.flush(len(data))
 		self.wait(0.1)
 		count = 0
+		skip = False
 		print("%04x "%addr, end='')
 		while self.ser.in_waiting:
 			ret = self.ser.read(self.ser.in_waiting)
-			print(ret.decode('utf-8', "backslashreplace"), end='')
+			if not skip:
+				string = ret.decode('utf-8', "backslashreplace")
+				nul = string.index(chr(0))
+				if nul < 0:
+					print(string, end='')
+				else:
+					print(string[:nul], end='')
+					skip = True
 			sleep(0.1)
 		if not self.scriptmode: print('\nok')
 		return False
