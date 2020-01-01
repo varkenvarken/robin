@@ -27,6 +27,11 @@
 	alu ${z},${x},${y}
 #end
 
+#define mul16 z,x,y
+	load aluop,#alu_mul16
+	alu ${z},${x},${y}
+#end
+
 #define and z,x,y
 	load aluop,#alu_and
 	alu ${z},${x},${y}
