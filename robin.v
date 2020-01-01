@@ -1,6 +1,6 @@
 /* robin, a SoC design for the IceBreaker board.
  *
- * Copyright 2019 Michel Anders
+ * Copyright 2019,2020 Michel Anders
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +137,18 @@ module top(
 	wire override_byte = cpu_raddr == 256;
 	wire override_nbytes = cpu_raddr == 257;
 	wire clear_nbytes = (cpu_waddr == 257) & cpu_write;
- 
+	wire override_leds = cpu_waddr == 511;
+
+	// blinkenlights module
+	always @(posedge CLK) begin
+		if(override_leds) begin
+			LED2 <= cpu_data_in[0];
+			LED3 <= cpu_data_in[1];
+			LED4 <= cpu_data_in[2];
+			LED5 <= cpu_data_in[3];
+		end
+	end
+
 	// actual wiring to ram
 	wire [7:0] ram_data_in;
 	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr, ram_raddr;
@@ -379,11 +390,9 @@ module top(
 							inbyte <= fifo_in_data_out;
 							fifo_in_read <= 1;
 							bytes_available <= 1;
-							LED2 <= 1;
 						end
 						if(clear_nbytes) begin
 							bytes_available <= 0;
-							LED2 <= 0;
 						end
 						if(counter)
 							counter <= counter - 1;
