@@ -1,4 +1,23 @@
-module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_ready, start_address, reset, halt, halted);
+/* robin, a SoC design for the IceBreaker board.
+ *
+ * cpu.v : a risc cpu
+ *
+ * Copyright 2019,2020 Michel Anders
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
+ */
+ 
+ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_ready, start_address, reset, halt, halted);
 	parameter addr_width = 9;
 	input clk;
 	input [7:0] mem_data_out;		// from memory to cpu
@@ -39,7 +58,30 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 		.c(alu_c),
 		.carry_out(alu_carry_out),
 		.is_zero(alu_is_zero),
-		.is_negative(alu_is_negative)
+		.is_negative(alu_is_negative),
+	);
+
+	// divider
+	wire [31:0] div_a = r[R1];
+	wire [31:0] div_b = r[R0];
+	wire [31:0] div_c;
+	reg  div_go;
+	wire div_divs = 0;
+	wire div_is_zero;
+	wire div_is_negative;
+	wire div_is_available;
+
+	divider div(
+		.clk(clk),
+		.reset(reset),
+		.a(div_a),
+		.b(div_b),
+		.go(div_go),
+		.divs(div_divs),
+		.c(div_c),
+		.is_zero(div_is_zero),
+		.is_negative(div_is_negative),
+		.available(div_is_available)
 	);
 
 	// cycle counter
@@ -185,19 +227,33 @@ module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_
 								instruction[7:0] <= mem_data_out;
 								r[15] <= r[15] + 1;
 								state <= DECODE;
+								div_go <= 0;
 							end
-				DECODE	:	state <= EXECUTE;
+				DECODE	:	begin
+								state <= EXECUTE;
+								if(alu_op == 20) div_go <= 1;
+							end
 				EXECUTE :	begin
 								state <= WAIT;
+								div_go <= 0;
 								case(cmd)
 									CMD_MOVEP:	begin
 													if(writable_destination) r[R2] <= sumr1r0;
 												end
 									CMD_ALU:	begin
-													if(writable_destination) r[R2] <= alu_c;
-													r[13][28] <= alu_carry_out;
-													r[13][29] <= alu_is_zero;
-													r[13][30] <= alu_is_negative;
+													if(alu_op != 20) begin
+														if(writable_destination) r[R2] <= alu_c;
+														r[13][28] <= alu_carry_out;
+														r[13][29] <= alu_is_zero;
+														r[13][30] <= alu_is_negative;
+													end else begin
+														if(div_is_available) begin
+															if(writable_destination) r[R2] <= div_c;
+															r[13][29] <= div_is_zero;
+															r[13][30] <= div_is_negative;
+														end else
+															state <= EXECUTE; 
+													end
 												end
 									CMD_MOVER:	begin
 													if(writable_destination) r[R2] <= r1_offset;

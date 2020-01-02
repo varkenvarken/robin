@@ -1,4 +1,23 @@
-module alu(
+/* robin, a SoC design for the IceBreaker board.
+ *
+ * alu.v : a 32 bit pure combinatorial alu
+ *
+ * Copyright 2019,2020 Michel Anders
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
+ */
+ 
+ module alu(
 	input [31:0] a,
 	input [31:0] b,
 	input carry_in,
@@ -30,8 +49,8 @@ module alu(
 
 	wire [32:0] result;
 
-	always @(*) begin
-		result= op == 0 ? add :
+	assign result = 
+				op == 0 ? add :
 				op == 1 ? adc :
 				op == 2 ? sub :
 				op == 3 ? sbc :
@@ -51,7 +70,6 @@ module alu(
 				op == 17 ? {1'b0, mult64[31:0]} :
 				op == 18 ? {1'b0, mult64[63:32]} :
 				33'b0;
-	end
 
 	assign c = result[31:0];
 	assign carry_out = result[32];

@@ -1,5 +1,7 @@
 /* robin, a SoC design for the IceBreaker board.
  *
+ * robin.v : top level module with monitor program
+ *
  * Copyright 2019,2020 Michel Anders
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
