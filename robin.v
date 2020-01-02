@@ -24,6 +24,9 @@ module top(
 	input RX,
 	output TX,
 	input BTN_N,
+	input BTN1,
+	input BTN2,
+	input BTN3,
 	output reg LED1,
 	output reg LED2,
 	output reg LED3,
@@ -32,19 +35,36 @@ module top(
 	output reg LEDR_N,
 	output reg LEDG_N);
 
+	// button wires
+	wire user_button, button1, button2,button3;
+	debounce #(.INITIAL_STATE(1'b1)) debounce_ubutton(CLK, BTN_N, user_button);
+
+	reg reset_button = 0;
+	reg user_button_pressed = 0;
+	always @(posedge CLK) begin
+		reset_button <= 0;
+		if(~ user_button & ~user_button_pressed) begin // pressed (negative logic)
+			user_button_pressed <= 1;
+			reset_button <= 1;	// a one clock strobe on pressing
+		end else begin
+			user_button_pressed <= 0;
+		end
+	end
+
 	// uart wires
-	wire u_reset = 0;
 	reg [7:0] u_tx_byte;
 	reg [7:0] u_rx_byte;
 	reg u_transmit;
 	wire u_received,u_is_transmitting;
 	wire u_error;
-	wire u_reset;
-	assign u_reset = ~reset; // uart reset is active high
+	wire u_reset = ~reset; // uart reset is active high
 
-	// global reset active low, cleared after startup
+	// global reset active low, cleared after startup, set on serial break or user button press
 	reg reset = 0;
-	always @(posedge CLK) reset <= 1;	// replace later with for example ~u_error to reset on break or on some button press
+	always @(posedge CLK) begin
+		reset <= 1;
+		if(u_error | reset_button) reset <= 0;
+	end
 
 	localparam FIFO_ADDR_WIDTH = 8;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
 	localparam LOWMEM_ADDR_WIDTH = 13;	// this gives us of 2¹³ == 8K bytes
