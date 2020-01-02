@@ -271,7 +271,8 @@ def assemble(lines, debug=False):
 		'alu_and': 4, 'alu_or' : 5, 'alu_xor': 6, 'alu_not': 7,
 		'alu_cmp': 8, 'alu_tst': 9,
 		'alu_shiftl':12, 'alu_shiftr':13,
-		'alu_mul16':16, 'alu_mul32lo':17, 'alu_mul32hi':18,
+		'alu_mul16':16, 'alu_mullo':17, 'alu_mulhi':18,
+		'alu_divu': 20,
 	}
 	addr=0
 	processed_lines = []
@@ -406,7 +407,7 @@ def printrun(addr,code):
 		chunk = code[start:start+128]
 		nbytes = len(chunk)
 		values = [nbytes,(addr+start)>>8,(addr+start)&255,0] + [int(b) for b in chunk]
-		values.append( ((sum(values) & 255) ^ 255) + 1 )
+		values.append( (((sum(values) & 255) ^ 255) + 1) & 255 )
 		print(":" + "".join(["%02x"%v for v in values]))
 
 def printhex(code):
