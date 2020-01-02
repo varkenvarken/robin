@@ -3,12 +3,13 @@
 module debounce(clk, switch_in, switch_out);
 	parameter DEBOUNCE_LIMIT = 240000;  // 20 ms at 12 MHz
 	parameter DEBOUNCE_SIZE = 18;        // number of bits needed to store DEBOUNCE_LIMIT
+	parameter INITIAL_STATE = 1'b0;     // change to 1 for negative logic buttons
 	input clk;
 	input switch_in;
 	output switch_out;
 
 	reg [DEBOUNCE_SIZE-1:0] count = 0;
-	reg state = 1'b0;
+	reg state = INITIAL_STATE;
  
 	always @(posedge clk)
 	begin
