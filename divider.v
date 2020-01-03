@@ -42,19 +42,36 @@
 	reg [32:0] quotient, quotient_part;
 	wire overshoot = divisor > dividend;
 	wire division_by_zero = (b == 0);
-	wire sign = a[31] ^ b[31];
-	wire [31:0] result = remainder ? dividend[31:0] : quotient[31:0];
+	// for signed division the sign of the remainder is always equal 
+	// to the sign of the dividend (a) while the sign of the quotient
+	// is equal to the product of the sign of dividend and divisor
+	// this to keep the following realation true
+	// quotient * divisor + remainder == dividend
+	wire signq = a[31] ^ b[31];
+	wire sign = remainder ? a[31] : signq ;
+	reg [31:0] result;
+	wire [31:0] abs_a = a[31] ? -a : a;
+	wire [31:0] abs_b = b[31] ? -b : b;
 
 	always @(posedge clk) begin
 		if(go) begin
+			// on receiving the go signal we initializer all registers
+			// we take care of taking the absolute values for
+			// dividend and divisor. We skip any calculations of a
+			// quotient if the divisor is zero.
 			step <= division_by_zero ? DIV_AVAILABLE : DIV_SHIFTL;
 			available <= 0;
-			dividend  <= divs ? {2'b0, a[30:0]} : {1'b0, a}; // have to add negation for a and b if they are negative!
-			divisor   <= divs ? {2'b0, b[30:0]} : {1'b0, b};
+			dividend  <= divs ? {1'b0, abs_a} : {1'b0, a};
+			divisor   <= divs ? {1'b0, abs_b} : {1'b0, b};
 			quotient  <= 0;
 			quotient_part <= 1;
 		end else
 			case(step)
+				// as long as the divisor is smaller than the dividend
+				// we multiply the divisor and the quotient_part by 2
+				// If no longer true, we correct by shifting everything
+				// back. This means registers should by 33 bit instead
+				// of 32 to accommodate the shifts.
 				DIV_SHIFTL	: 	begin
 									if(~overshoot) begin
 										divisor <= divisor << 1;
@@ -65,6 +82,12 @@
 										step <= DIV_SUBTRACT;
 									end
 								end
+				// the next state is all about subtracting the divisor
+				// if it is smaller than the dividend. If it is, we
+				// perform the subtraction and or in the quotient_part
+				// into the quotient. Then divisor and quotient_part
+				// are halved again until the quotient_part is zero, in
+				// which case we are done.
 				DIV_SUBTRACT:	begin
 									if(quotient_part == 0)
 										step <= DIV_AVAILABLE;
@@ -77,15 +100,20 @@
 										quotient_part <= quotient_part >> 1;
 									end
 								end
+				// we signal availability of the result (for one clock)
+				// to the cpu and set the result to the chosen option.
 				DIV_AVAILABLE:	begin
 									step <= DIV_DONE;
 									available <= 1;
+									result <= remainder ? dividend[31:0] : quotient[31:0];
 								end
 				default		: 	available <= 0;
 			endcase
 	end
 
-	assign c = divs ? {sign, result[30:0]} : result[31:0];
+	// these wires make sure that the correct sign correction is applied
+	// and the relevant flags are returned.
+	assign c = divs ? (sign ? -result : result) : result;
 	assign is_zero = (c == 0);
 	assign is_negative = c[31];
 

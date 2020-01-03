@@ -233,7 +233,7 @@
 							end
 				DECODE	:	begin
 								state <= EXECUTE;
-								if(alu_op == 32) div_go <= 1;
+								if(alu_op[5]) div_go <= 1; // start the divider module if we have a divider operation
 							end
 				EXECUTE :	begin
 								state <= WAIT;
@@ -243,12 +243,12 @@
 													if(writable_destination) r[R2] <= sumr1r0;
 												end
 									CMD_ALU:	begin
-													if(alu_op != 32) begin
+													if(~alu_op[5]) begin // regular alu operation (single cycle)
 														if(writable_destination) r[R2] <= alu_c;
 														r[13][28] <= alu_carry_out;
 														r[13][29] <= alu_is_zero;
 														r[13][30] <= alu_is_negative;
-													end else begin
+													end else begin // divider operation (multiple cycles)
 														if(div_is_available) begin
 															if(writable_destination) r[R2] <= div_c;
 															r[13][29] <= div_is_zero;
