@@ -1,16 +1,23 @@
 /* from reference inference example in 
 Memory Usage Guide for iCE40 Devices Technical Note TN1250
+
+initial data added later.
 */
 
 module ram (din, write_en, waddr, wclk, raddr, rclk, dout); //512x8 by default
 	parameter addr_width = 9;
 	parameter data_width = 8;
+	parameter rom_contents = "";
 	input [addr_width-1:0] waddr, raddr;
 	input [data_width-1:0] din;
 	input write_en, wclk, rclk;
 	output reg [data_width-1:0] dout;
-	reg [data_width-1:0] mem [(1<<addr_width)-1:0]
-	;
+
+	reg [data_width-1:0] mem [(1<<addr_width)-1:0];
+
+	if(rom_contents != "") begin
+		initial $readmemh(rom_contents, mem);
+	end
 
 	always @(posedge wclk) // Write memory.
 	begin

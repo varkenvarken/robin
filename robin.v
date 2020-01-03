@@ -62,10 +62,14 @@ module top(
 	wire u_reset = ~reset; // uart reset is active high
 
 	// global reset active low, cleared after startup, set on serial break or user button press
+	// we keep this in reset state for 36 cycles to allow blockrams to produce valid data as per
+	// https://github.com/cliffordwolf/icestorm/issues/76#issuecomment-289270411
 	reg reset = 0;
+	reg [5:0] reset_count = 0;
 	always @(posedge CLK) begin
-		reset <= 1;
-		if(u_error | reset_button) reset <= 0;
+		if (reset_count == 36) // <-- set this to 36 to work around the issue
+			reset <= 1;
+		reset_count <= reset_count + 1;
 	end
 
 	localparam FIFO_ADDR_WIDTH = 8;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
@@ -213,7 +217,7 @@ module top(
 		.dout		(ram_data_out0)
 	);
 
-	ram #(.addr_width(LOWMEM_ADDR_WIDTH2))
+	ram #(.addr_width(LOWMEM_ADDR_WIDTH2), .rom_contents("rom.hex"))
 	mem1(
 		.din		(ram_data_in), 
 		.write_en	(ram_write1), 
