@@ -69,7 +69,10 @@ module top(
 	end
 
 	localparam FIFO_ADDR_WIDTH = 8;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
-	localparam LOWMEM_ADDR_WIDTH = 13;	// this gives us of 2¹³ == 8K bytes
+	localparam MEM_ADDR_WIDTH = 14;		// this gives us of 2^14 == 16K bytes
+	localparam LOWMEM_ADDR_WIDTH = 13;	// this gives us of 2¹³ == 8K bytes for the lowest ram block
+	localparam LOWMEM_ADDR_WIDTH2 = 12;	// this gives us of 2^12 == 4K bytes for the next ram block (which might become a ROM later
+
 	localparam DUMPWAIT = 16'hfff;		// additional wait time between sending chars (approx. .3 milliseconds) because u_is_transmitting not reliable)
 
 	// the UART config. baudrate hardcoded.
@@ -119,14 +122,14 @@ module top(
 
 	// cpu and wiring
 	wire [7:0] cpu_data_in;
-	wire [LOWMEM_ADDR_WIDTH-1:0] cpu_waddr, cpu_raddr;
+	wire [MEM_ADDR_WIDTH-1:0] cpu_waddr, cpu_raddr;
 	wire cpu_write;
 	wire [7:0] cpu_data_out;
 	reg cpu_reset;
 	reg cpu_halt;
 	wire cpu_halted;
 
-	cpu #(.addr_width(LOWMEM_ADDR_WIDTH)) cpu0(
+	cpu #(.addr_width(MEM_ADDR_WIDTH)) cpu0(
 		.clk(CLK), 
 		.mem_data_out(cpu_data_out),
 		.mem_data_in(cpu_data_in),
@@ -150,7 +153,7 @@ module top(
 	// blockram
 	// monitor managed registers (all mem_ prefixes probably should be renamed to to mon_ )
 	reg [7:0] mem_data_in;
-	reg [LOWMEM_ADDR_WIDTH-1:0] mem_waddr, mem_raddr;
+	reg [MEM_ADDR_WIDTH-1:0] mem_waddr, mem_raddr;
 	reg mem_write;
 	wire [7:0] mem_data_out;
 
@@ -173,7 +176,7 @@ module top(
 
 	// actual wiring to ram
 	wire [7:0] ram_data_in;
-	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr, ram_raddr;
+	wire [MEM_ADDR_WIDTH-1:0] ram_waddr, ram_raddr;
 	wire ram_write;
 	wire [7:0] ram_data_out;
 
@@ -184,15 +187,41 @@ module top(
 	assign mem_data_out= ram_data_out;
 	assign cpu_data_out= override_byte ? inbyte : (override_nbytes ? bytes_available : ram_data_out);
 
+	// first block [0,8k]
+	wire ram_write0 = ram_waddr[MEM_ADDR_WIDTH-1:13] == 0;
+	wire ram_read0 = ram_raddr[MEM_ADDR_WIDTH-1:13] == 0;
+	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr0 = ram_waddr[LOWMEM_ADDR_WIDTH-1:0];
+	wire [LOWMEM_ADDR_WIDTH-1:0] ram_raddr0 = ram_raddr[LOWMEM_ADDR_WIDTH-1:0] ;
+	wire [7:0] ram_data_out0;
+	// second block [8k,12k]
+	wire ram_write1 = ram_waddr[MEM_ADDR_WIDTH-1:12] == 2'b10;
+	wire ram_read1 = ram_raddr[MEM_ADDR_WIDTH-1:12] == 2'b10;
+	wire [LOWMEM_ADDR_WIDTH2-1:0] ram_waddr1 = ram_waddr[LOWMEM_ADDR_WIDTH2-1:0];
+	wire [LOWMEM_ADDR_WIDTH2-1:0] ram_raddr1 = ram_raddr[LOWMEM_ADDR_WIDTH2-1:0];
+	wire [7:0] ram_data_out1;
+
+	assign mem_data_out= ram_read0 ? ram_data_out0 : ram_data_out1;
+
 	ram #(.addr_width(LOWMEM_ADDR_WIDTH))
-	mem(
+	mem0(
 		.din		(ram_data_in), 
-		.write_en	(ram_write), 
-		.waddr		(ram_waddr), 
+		.write_en	(ram_write0), 
+		.waddr		(ram_waddr0), 
 		.wclk(CLK), 
-		.raddr		(ram_raddr), 
+		.raddr		(ram_raddr0), 
 		.rclk(CLK),
-		.dout		(ram_data_out)
+		.dout		(ram_data_out0)
+	);
+
+	ram #(.addr_width(LOWMEM_ADDR_WIDTH2))
+	mem1(
+		.din		(ram_data_in), 
+		.write_en	(ram_write1), 
+		.waddr		(ram_waddr1), 
+		.wclk(CLK), 
+		.raddr		(ram_raddr1), 
+		.rclk(CLK),
+		.dout		(ram_data_out1)
 	);
 
 	// transmitting fifo
@@ -255,7 +284,7 @@ module top(
 	reg [7:0] bytes[6]; // cmd, adr1, adr2, adr3, len1, len2
 	reg [2:0] rc;
 	reg [15:0] len;
-	reg [LOWMEM_ADDR_WIDTH-1:0] addr;
+	reg [MEM_ADDR_WIDTH-1:0] addr;
 
 	// monitor state machine
 	localparam START   = 4'd0;
