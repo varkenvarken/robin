@@ -50,25 +50,25 @@
 	wire [32:0] result;
 
 	assign result = 
-				op == 0 ? add :
-				op == 1 ? adc :
-				op == 2 ? sub :
-				op == 3 ? sbc :
+				op[4:0] == 0 ? add :
+				op[4:0] == 1 ? adc :
+				op[4:0] == 2 ? sub :
+				op[4:0] == 3 ? sbc :
 
-				op == 4 ? b_or :
-				op == 5 ? b_and :
-				op == 6 ? b_not :
-				op == 7 ? b_xor :
+				op[4:0] == 4 ? b_or :
+				op[4:0] == 5 ? b_and :
+				op[4:0] == 6 ? b_not :
+				op[4:0] == 7 ? b_xor :
 
-				op == 8 ? cmp :
-				op == 9 ? {1'b0, a} :
+				op[4:0] == 8 ? cmp :
+				op[4:0] == 9 ? {1'b0, a} :
 
-				op == 12 ? shiftl :
-				op == 13 ? shiftr :
+				op[4:0] == 12 ? shiftl :
+				op[4:0] == 13 ? shiftr :
 
-				op == 16 ? {17'b0, mult_al_bl} :
-				op == 17 ? {1'b0, mult64[31:0]} :
-				op == 18 ? {1'b0, mult64[63:32]} :
+				op[4:0] == 16 ? {17'b0, mult_al_bl} :
+				op[4:0] == 17 ? {1'b0, mult64[31:0]} :
+				op[4:0] == 18 ? {1'b0, mult64[63:32]} :
 				33'b0;
 
 	assign c = result[31:0];
