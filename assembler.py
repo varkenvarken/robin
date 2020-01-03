@@ -272,7 +272,7 @@ def assemble(lines, debug=False):
 		'alu_cmp': 8, 'alu_tst': 9,
 		'alu_shiftl':12, 'alu_shiftr':13,
 		'alu_mul16':16, 'alu_mullo':17, 'alu_mulhi':18,
-		'alu_divu': 32, 'alu_divs': 33, 'alu_modu': 34, 'alu_mods': 35,
+		'alu_divu': 32, 'alu_divs': 33, 'alu_remu': 34, 'alu_rems': 35,
 	}
 	addr=0
 	processed_lines = []
@@ -302,7 +302,7 @@ def assemble(lines, debug=False):
 				if op.endswith(':') or op.endswith('='):
 					constant = op.endswith('=')
 					label=op[:-1]
-					if label in labels: warning('%s[%d]redefined label'%(filename,linenumber))
+					if label in labels: print('%s[%d]redefined label'%(filename,linenumber), file=sys.stderr)
 					if operand == '':
 						if constant: warning('%s[%d]empty constant definition, default to addr'%(filename,linenumber))
 						labels[label]=addr  # implicit label definition
