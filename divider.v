@@ -24,33 +24,34 @@
 	input [31:0] b,
 	input go,
 	input divs,
+	input remainder,
 	output [31:0] c,
 	output is_zero,
 	output is_negative,
 	output reg available
 	);
 
-	localparam DIV_SHIFTL    = 0;
-	localparam DIV_SUBTRACT  = 1;
-	localparam DIV_AVAILABLE = 2;
-	localparam DIV_DONE      = 3;
-	reg [2:0] step;
+	localparam DIV_SHIFTL    = 2'd0;
+	localparam DIV_SUBTRACT  = 2'd1;
+	localparam DIV_AVAILABLE = 2'd2;
+	localparam DIV_DONE      = 2'd3;
+	reg [1:0] step;
 
-	reg [31:0] dividend;
-	reg [31:0] divisor;
-	reg [31:0] quotient, quotient_part;
+	reg [32:0] dividend;
+	reg [32:0] divisor;
+	reg [32:0] quotient, quotient_part;
 	wire overshoot = divisor > dividend;
 	wire division_by_zero = (b == 0);
-
-	wire [31:0] result = quotient;
+	wire sign = a[31] ^ b[31];
+	wire [31:0] result = remainder ? dividend[31:0] : quotient[31:0];
 
 	always @(posedge clk) begin
 		if(go) begin
-			step <= DIV_SHIFTL;
+			step <= division_by_zero ? DIV_AVAILABLE : DIV_SHIFTL;
 			available <= 0;
-			dividend <= a;
-			divisor <= b;
-			quotient <= 0;
+			dividend  <= divs ? {2'b0, a[30:0]} : {1'b0, a}; // have to add negation for a and b if they are negative!
+			divisor   <= divs ? {2'b0, b[30:0]} : {1'b0, b};
+			quotient  <= 0;
 			quotient_part <= 1;
 		end else
 			case(step)
@@ -84,7 +85,7 @@
 			endcase
 	end
 
-	assign c = result[31:0];
+	assign c = divs ? {sign, result[30:0]} : result[31:0];
 	assign is_zero = (c == 0);
 	assign is_negative = c[31];
 

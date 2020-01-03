@@ -66,7 +66,8 @@
 	wire [31:0] div_b = r[R0];
 	wire [31:0] div_c;
 	reg  div_go;
-	wire div_divs = 0;
+	wire div_divs = alu_op[0];
+	wire remainder = alu_op[1];
 	wire div_is_zero;
 	wire div_is_negative;
 	wire div_is_available;
@@ -78,6 +79,7 @@
 		.b(div_b),
 		.go(div_go),
 		.divs(div_divs),
+		.remainder(remainder),
 		.c(div_c),
 		.is_zero(div_is_zero),
 		.is_negative(div_is_negative),
@@ -231,7 +233,7 @@
 							end
 				DECODE	:	begin
 								state <= EXECUTE;
-								if(alu_op == 20) div_go <= 1;
+								if(alu_op == 32) div_go <= 1;
 							end
 				EXECUTE :	begin
 								state <= WAIT;
@@ -241,7 +243,7 @@
 													if(writable_destination) r[R2] <= sumr1r0;
 												end
 									CMD_ALU:	begin
-													if(alu_op != 20) begin
+													if(alu_op != 32) begin
 														if(writable_destination) r[R2] <= alu_c;
 														r[13][28] <= alu_carry_out;
 														r[13][29] <= alu_is_zero;
