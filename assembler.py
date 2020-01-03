@@ -272,7 +272,7 @@ def assemble(lines, debug=False):
 		'alu_cmp': 8, 'alu_tst': 9,
 		'alu_shiftl':12, 'alu_shiftr':13,
 		'alu_mul16':16, 'alu_mullo':17, 'alu_mulhi':18,
-		'alu_divu': 20,
+		'alu_divu': 32, 'alu_divs': 33, 'alu_modu': 34, 'alu_mods': 35,
 	}
 	addr=0
 	processed_lines = []
