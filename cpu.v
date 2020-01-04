@@ -58,7 +58,7 @@
 		.c(alu_c),
 		.carry_out(alu_carry_out),
 		.is_zero(alu_is_zero),
-		.is_negative(alu_is_negative),
+		.is_negative(alu_is_negative)
 	);
 
 	// divider
