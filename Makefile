@@ -2,6 +2,7 @@ SYN = yosys
 PNR = nextpnr-ice40
 GEN = icepack
 PROG = iceprog 
+ASSEMBLER = python3 assembler.py
 
 TOP = robin.v
 PCF = icebreaker.pcf
@@ -19,11 +20,14 @@ all: $(OUTPUT)
 %.asc: %.json $(PCF)
 	$(PNR) $(DEVICE) --placer $(PLACER) --package $(PACKAGE) --quiet --log $(PLACERLOG) --json $< --pcf $(PCF) --asc $@
 
-%.json: $(TOP) debounce.v fifo.v ram.v cpu.v alu.v divider.v $(PCF) Makefile
+%.json: $(TOP) debounce.v fifo.v ram.v spram.v cpu.v alu.v divider.v $(PCF) rom.hex Makefile
 	$(SYN) -q -p "read_verilog $<; hierarchy -libdir . ; synth_ice40 -dsp -flatten -json $@"
 
+rom.hex: rom.S
+	$(ASSEMBLER) --hex $< > $@
+
 clean:
-	rm -f *.bin *.blif *.tiles *.asc *.json
+	rm -f *.bin *.blif *.tiles *.asc *.json rom.hex
 
 flash: $(OUTPUT)
 	$(PROG) $<

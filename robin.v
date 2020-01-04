@@ -73,9 +73,10 @@ module top(
 	end
 
 	localparam FIFO_ADDR_WIDTH = 8;		// we could go to 9 gving us buffers of 2⁹ == 512 bytes
-	localparam MEM_ADDR_WIDTH = 14;		// this gives us of 2^14 == 16K bytes
+	localparam MEM_ADDR_WIDTH = 18;		// this gives us of 2^18 == 256K bytes
 	localparam LOWMEM_ADDR_WIDTH = 13;	// this gives us of 2¹³ == 8K bytes for the lowest ram block
 	localparam LOWMEM_ADDR_WIDTH2 = 12;	// this gives us of 2^12 == 4K bytes for the next ram block (which might become a ROM later
+	localparam LOWMEM_ADDR_WIDTH3 = 17;	// this gives us of 2^17 == 128K bytes for the spram block
 
 	localparam DUMPWAIT = 16'hfff;		// additional wait time between sending chars (approx. .3 milliseconds) because u_is_transmitting not reliable)
 
@@ -191,20 +192,26 @@ module top(
 	assign mem_data_out= ram_data_out;
 	assign cpu_data_out= override_byte ? inbyte : (override_nbytes ? bytes_available : ram_data_out);
 
-	// first block [0,8k]
-	wire ram_write0 = ram_waddr[MEM_ADDR_WIDTH-1:13] == 0;
+	// first block [0,8k] (bram)
+	wire ram_write0 = (ram_waddr[MEM_ADDR_WIDTH-1:13] == 0) & ram_write;
 	wire ram_read0 = ram_raddr[MEM_ADDR_WIDTH-1:13] == 0;
 	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr0 = ram_waddr[LOWMEM_ADDR_WIDTH-1:0];
 	wire [LOWMEM_ADDR_WIDTH-1:0] ram_raddr0 = ram_raddr[LOWMEM_ADDR_WIDTH-1:0] ;
 	wire [7:0] ram_data_out0;
-	// second block [8k,12k]
-	wire ram_write1 = ram_waddr[MEM_ADDR_WIDTH-1:12] == 2'b10;
-	wire ram_read1 = ram_raddr[MEM_ADDR_WIDTH-1:12] == 2'b10;
+	// second block [8k,12k] (bram, used as preinitialized memory/rom)
+	wire ram_write1 = (ram_waddr[MEM_ADDR_WIDTH-1:12] == 6'b000010) & ram_write;
+	wire ram_read1 = ram_raddr[MEM_ADDR_WIDTH-1:12] == 6'b000010;
 	wire [LOWMEM_ADDR_WIDTH2-1:0] ram_waddr1 = ram_waddr[LOWMEM_ADDR_WIDTH2-1:0];
 	wire [LOWMEM_ADDR_WIDTH2-1:0] ram_raddr1 = ram_raddr[LOWMEM_ADDR_WIDTH2-1:0];
 	wire [7:0] ram_data_out1;
+	// second block [128k,256k]
+	wire ram_write2 = (ram_waddr[MEM_ADDR_WIDTH-1] == 1'b1) & ram_write;
+	wire ram_read2 = ram_raddr[MEM_ADDR_WIDTH-1] == 1'b1;
+	wire [LOWMEM_ADDR_WIDTH3-1:0] ram_waddr2 = ram_waddr[LOWMEM_ADDR_WIDTH3-1:0];
+	wire [LOWMEM_ADDR_WIDTH3-1:0] ram_raddr2 = ram_raddr[LOWMEM_ADDR_WIDTH3-1:0];
+	wire [7:0] ram_data_out2;
 
-	assign mem_data_out= ram_read0 ? ram_data_out0 : ram_data_out1;
+	assign mem_data_out= ram_read0 ? ram_data_out0 : ram_read1 ? ram_data_out1 : ram_data_out2;
 
 	ram #(.addr_width(LOWMEM_ADDR_WIDTH))
 	mem0(
@@ -226,6 +233,15 @@ module top(
 		.raddr		(ram_raddr1), 
 		.rclk(CLK),
 		.dout		(ram_data_out1)
+	);
+
+	spram
+	mem2(
+		.clk(CLK),
+		.wen(ram_write2),
+		.addr(ram_write2 ? ram_waddr2 : ram_raddr2),
+		.wdata(ram_data_in),
+		.rdata(ram_data_out2)
 	);
 
 	// transmitting fifo

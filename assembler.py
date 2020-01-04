@@ -410,7 +410,7 @@ def printrun(addr,code):
 		values.append( (((sum(values) & 255) ^ 255) + 1) & 255 )
 		print(":" + "".join(["%02x"%v for v in values]))
 
-def printhex(code):
+def printihex(code):
 	start = 0
 	while start < len(code):
 		startzero = start
@@ -425,12 +425,17 @@ def printhex(code):
 			start = end
 	print(":00000001FF")
 
+def printhex(code):
+	for start in range(0,len(code),64):
+		print("".join(["%02x "%v for v in code[start:start+64]]))
+
 if __name__ == '__main__':
 	parser = ArgumentParser()
 	parser.add_argument('-l', '--labels', help='print list of labels to stderr', action="store_true")
 	parser.add_argument('-u', '--usage', help='show allowed syntax and exit', action="store_true")
 	parser.add_argument('-d', '--debug', help='dump internal code representation', action="store_true")
-	parser.add_argument('-x', '--hex', help='produce output in Intel HEX format', action="store_true")
+	parser.add_argument('-i', '--ihex', help='produce output in Intel HEX format', action="store_true")
+	parser.add_argument('-v', '--hex', help='produce output in Verilog HEX format', action="store_true")
 	parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
 	args = parser.parse_args()
 
@@ -452,7 +457,9 @@ if __name__ == '__main__':
 			print("%-20s %04x"%(label,labels[label]), file=sys.stderr)
 
 	if errors == 0:
-		if args.hex:
+		if args.ihex:
+			printihex(code)
+		elif args.hex:
 			printhex(code)
 		else:
 			nbytes = len(code)
