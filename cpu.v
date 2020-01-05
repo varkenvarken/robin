@@ -36,7 +36,6 @@
 
 	// special registers
 	reg [15:0] instruction;
-	reg [3:0] rc; // counter to iterate over all registers
 
 	reg [addr_width-1:0] mem_waddr_next;
 
@@ -96,41 +95,34 @@
 	end
 
 	// state machine
-	reg [5:0] state;
-	localparam FETCH	= 0;
-	localparam HALT		= 1;
-	localparam HALT1	= 2;
-	localparam HALT2	= 3;
-	localparam HALT3	= 4;
-	localparam HALT4	= 5;
-	localparam HALT5	= 6;
-	localparam HALT6	= 7;
-	localparam HALT7	= 8;
-	localparam HALTED	= 9;
-	localparam FETCH1	= 10;
-	localparam FETCH2	= 11;
-	localparam FETCH3	= 12;
-	localparam DECODE	= 13;
-	localparam EXECUTE	= 14;
-	localparam LOAD1	= 15;
-	localparam WRITEWAIT= 16;
-	localparam WAIT     = 17;
-	localparam FETCH1w	= 18;
-	localparam FETCH3w	= 19;
-	localparam LOAD1w	= 20;
-	localparam LOADWw	= 21;
-	localparam LOADW1	= 22;
-	localparam LOADLw	= 23;
-	localparam LOADL1	= 24;
-	localparam LOADLw2	= 25;
-	localparam LOADL2	= 26;
-	localparam WRITEWAITB= 27;
-	localparam WRITEWAITW= 28;
-	localparam WRITEWAITW1= 29;
-	localparam WRITEWAITL= 30;
-	localparam WRITEWAITL1= 31;
-	localparam WRITEWAITL2= 32;
-	localparam WRITEWAITL3= 33;
+	reg [4:0] state;
+	localparam FETCH		= 0;
+	localparam FETCH1w		= 1;
+	localparam FETCH1		= 2;
+	localparam FETCH2		= 3;
+	localparam FETCH3w		= 4;
+	localparam FETCH3		= 5;
+	localparam DECODE		= 6;
+	localparam EXECUTE		= 7;
+	localparam LOAD1		= 8;
+	localparam LOAD1w		= 9;
+	localparam LOADWw		= 10;
+	localparam LOADW1		= 11;
+	localparam LOADLw		= 12;
+	localparam LOADL1		= 13;
+	localparam LOADLw2		= 14;
+	localparam LOADL2		= 15;
+	localparam WRITEWAIT	= 16;
+	localparam WRITEWAITB	= 17;
+	localparam WRITEWAITW	= 18;
+	localparam WRITEWAITW1	= 19;
+	localparam WRITEWAITL	= 20;
+	localparam WRITEWAITL1	= 21;
+	localparam WRITEWAITL2	= 22;
+	localparam WRITEWAITL3	= 23;
+	localparam WAIT			= 24;
+	localparam HALT			= 25;
+	localparam HALTED		= 26;
 
 	wire haltinstruction = &instruction; // all ones
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
@@ -171,8 +163,8 @@
 		if(reset) begin
 			r[0] <= 0;
 			r[1] <= 1;
-			r[2] <= 0;
-			r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bit 28 is carry, bits [7;0] is aluop
+			//r[2] <= 0;
+			//r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bit 28 is carry, bits [7;0] is aluop
 			r[15] <= start_address;
 			halted <= 0;
 			state <= FETCH;
@@ -181,28 +173,8 @@
 		if(halt | haltinstruction) begin
 			state <= HALT;
 			instruction <= 0; // this will clear haltinstruction
-			rc <= 0;
-			mem_waddr_next <= 2; // start address of register dump
 		end else
 			case(state)
-//				START	:	begin
-//								mem_raddr <= 0;
-//								state <= START1w;
-//							end
-//				START1w	:	state <= START1;
-//				START1	:	begin
-//								r[2][15:8] <= mem_data_out; // no check for mem_ready yet
-//								state <= START1b;
-//							end
-//				START1b	:	begin
-//								mem_raddr <= 1;
-//								state <= START2w;
-//							end
-//				START2w	:	state <= START2;
-//				START2	:	begin
-//								r[2][7:0] <= mem_data_out;
-//								state <= FETCH;
-//							end
 				FETCH	:	begin
 								r[13][31] <= 1; // force the always on bit
 								mem_raddr <= ip;
@@ -359,45 +331,7 @@
 							end
 				WAIT	:	state <= FETCH;
 				HALT	:	begin
-								mem_waddr <= mem_waddr_next;
-								mem_data_in <= r[rc][31:24];
-								state <= HALT1;
-							end
-				HALT1	:	begin
-								mem_write <= 1;
-								mem_waddr_next <= mem_waddr + 1;
-								state <= HALT2;
-							end
-				HALT2	:	begin
-								mem_waddr <= mem_waddr_next;
-								mem_data_in <= r[rc][23:16];
-								state <= HALT3;
-							end
-				HALT3	:	begin
-								mem_write <= 1;
-								mem_waddr_next <= mem_waddr + 1;
-								state <= HALT4;
-							end
-				HALT4	:	begin
-								mem_waddr <= mem_waddr_next;
-								mem_data_in <= r[rc][15:8];
-								state <= HALT5;
-							end
-				HALT5	:	begin
-								mem_write <= 1;
-								mem_waddr_next <= mem_waddr + 1;
-								state <= HALT6;
-							end
-				HALT6	:	begin
-								mem_waddr <= mem_waddr_next;
-								mem_data_in <= r[rc][7:0];
-								state <= HALT7;
-							end
-				HALT7	:	begin
-								mem_write <= 1;
-								mem_waddr_next <= mem_waddr + 1;
-								rc <= rc + 1;
-								state <= (rc == 4'b1111) ? HALTED : HALT;
+								state <= HALTED;
 							end
 				HALTED	:	begin
 								halted <= 1;

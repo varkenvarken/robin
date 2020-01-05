@@ -309,11 +309,11 @@ class Monitor(cmd.Cmd):
 
 	def do_show(self, line):
 		"""
-		show      dump 16 4 byte words startign from address 2 (stored registers after halt)
+		show      dump 16 4 byte words starting from address 0x80
 		"""
 		self.flush()
 		self.length = 64
-		addr = 2
+		addr = 0x80
 		data = [0x02, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((self.length >> 8) & 255), ((self.length) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -495,7 +495,9 @@ class Monitor(cmd.Cmd):
 		run <hexaddress> [arg]	run program at <hexaddress> showing output as hexbytes
 		"""
 		self.flush()
-		addr, val = self.splitrun(line)
+		addr, values = self.splitrun(line)
+		# value argument is a dummy
+		val = 0
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -557,7 +559,9 @@ class Monitor(cmd.Cmd):
 		runp <hexaddress> [arg]	run program at <hexaddress> with a separate read process, showing output as hexbytes
 		"""
 		self.flush()
-		addr, val = self.splitrun(line)
+		addr, values = self.splitrun(line)
+		# value argument is a dummy
+		val = 0
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)
@@ -583,7 +587,9 @@ class Monitor(cmd.Cmd):
 		runps <hexaddress> [arg] [-t]	run program at <hexaddress> with a separate read process, showing output as unicode strings
 		"""
 		self.flush()
-		addr, val = self.splitrun(line)
+		addr, values = self.splitrun(line)
+		# value argument is a dummy
+		val = 0
 		self.timestamp = False
 		if len(self.args) > 2 and self.args[2] == '-t':
 			self.timestamp = True
@@ -650,7 +656,9 @@ class Monitor(cmd.Cmd):
 		runs <hexaddress> [arg] 	run program at <hexaddress> showing output as unicode chars
 		"""
 		self.flush()
-		addr, val = self.splitrun(line)
+		addr, values = self.splitrun(line)
+		# value argument is a dummy
+		val = 0
 		data = [0x03, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((val >> 8) & 255), ((val) & 255)]
 		self.ser.write(bytes(data))
 		self.wait(0.1)

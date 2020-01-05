@@ -294,7 +294,7 @@ module top(
 	//		01 <addr> <len> <byte ...>
 	// dump: show bytes in blockram
 	//		02 <addr> <len>
-	// exec: run program and load word into lower two bytes of memory
+	// exec: run program (ignore <word>)
 	//		03 <addr> <word>
 
 	// monitor state
