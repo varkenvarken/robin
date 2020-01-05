@@ -378,7 +378,7 @@ module top(
 						case(bytes[0][1:0])
 							1	: state <= LOAD0;
 							2	: state <= DUMP0;
-							3	: state <= EXEC0;
+							3	: state <= EXEC2;
 							default: state <= FLUSH;
 						endcase
 					end
@@ -428,18 +428,18 @@ module top(
 							addr <= addr + 1;
 						end
 					end
-			EXEC0:	begin
-						mem_waddr <= 0;
-						mem_data_in <= len[15:8];
-						mem_write <= 1;
-						state <= EXEC1;
-					end
-			EXEC1:	begin
-						mem_waddr <= 1;
-						mem_data_in <= len[7:0];
-						mem_write <= 1;
-						state <= EXEC2;
-					end
+//			EXEC0:	begin
+//						mem_waddr <= 0;
+//						mem_data_in <= len[15:8];
+//						mem_write <= 1;
+//						state <= EXEC1;
+//					end
+//			EXEC1:	begin
+//						mem_waddr <= 1;
+//						mem_data_in <= len[7:0];
+//						mem_write <= 1;
+//						state <= EXEC2;
+//					end
 			EXEC2:	begin
 						cpu_halt <= 0;
 						running <= 1;

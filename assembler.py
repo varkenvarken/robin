@@ -304,7 +304,7 @@ def assemble(lines, debug=False):
 					label=op[:-1]
 					if label in labels: print('%s[%d]redefined label'%(filename,linenumber), file=sys.stderr)
 					if operand == '':
-						if constant: warning('%s[%d]empty constant definition, default to addr'%(filename,linenumber))
+						if constant: print('%s[%d]empty constant definition, default to addr'%(filename,linenumber), file=sys.stderr)
 						labels[label]=addr  # implicit label definition
 					else:
 						try:
@@ -378,7 +378,7 @@ def assemble(lines, debug=False):
 						print('warning: %s[%d]label %s defined to be at lower address than current'%(filename,linenumber,label), file=sys.stderr)
 					else:
 						code.extend([0] * fill)
-						addr = newaddr
+					addr = newaddr
 			if debug : dcode = "%04x %s "%(addr, label)
 		else:
 			try:

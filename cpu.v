@@ -97,46 +97,40 @@
 
 	// state machine
 	reg [5:0] state;
-	localparam START	= 0;
-	localparam START1	= 1;
-	localparam START2	= 2;
-	localparam FETCH	= 3;
-	localparam HALT		= 4;
-	localparam HALT1	= 5;
-	localparam HALT2	= 6;
-	localparam HALT3	= 7;
-	localparam HALT4	= 8;
-	localparam HALT5	= 9;
-	localparam HALT6	= 10;
-	localparam HALT7	= 11;
-	localparam HALTED	= 12;
-	localparam FETCH1	= 13;
-	localparam FETCH2	= 14;
-	localparam FETCH3	= 15;
-	localparam DECODE	= 16;
-	localparam EXECUTE	= 17;
-	localparam LOAD1	= 18;
-	localparam WRITEWAIT= 19;
-	localparam WAIT     = 20;
-	localparam START1b	= 21;
-	localparam START1w	= 22;
-	localparam START2w	= 23;
-	localparam FETCH1w	= 24;
-	localparam FETCH3w	= 25;
-	localparam LOAD1w	= 26;
-	localparam LOADWw	= 27;
-	localparam LOADW1	= 28;
-	localparam LOADLw	= 29;
-	localparam LOADL1	= 30;
-	localparam LOADLw2	= 31;
-	localparam LOADL2	= 32;
-	localparam WRITEWAITB= 33;
-	localparam WRITEWAITW= 34;
-	localparam WRITEWAITW1= 35;
-	localparam WRITEWAITL= 36;
-	localparam WRITEWAITL1= 37;
-	localparam WRITEWAITL2= 38;
-	localparam WRITEWAITL3= 39;
+	localparam FETCH	= 0;
+	localparam HALT		= 1;
+	localparam HALT1	= 2;
+	localparam HALT2	= 3;
+	localparam HALT3	= 4;
+	localparam HALT4	= 5;
+	localparam HALT5	= 6;
+	localparam HALT6	= 7;
+	localparam HALT7	= 8;
+	localparam HALTED	= 9;
+	localparam FETCH1	= 10;
+	localparam FETCH2	= 11;
+	localparam FETCH3	= 12;
+	localparam DECODE	= 13;
+	localparam EXECUTE	= 14;
+	localparam LOAD1	= 15;
+	localparam WRITEWAIT= 16;
+	localparam WAIT     = 17;
+	localparam FETCH1w	= 18;
+	localparam FETCH3w	= 19;
+	localparam LOAD1w	= 20;
+	localparam LOADWw	= 21;
+	localparam LOADW1	= 22;
+	localparam LOADLw	= 23;
+	localparam LOADL1	= 24;
+	localparam LOADLw2	= 25;
+	localparam LOADL2	= 26;
+	localparam WRITEWAITB= 27;
+	localparam WRITEWAITW= 28;
+	localparam WRITEWAITW1= 29;
+	localparam WRITEWAITL= 30;
+	localparam WRITEWAITL1= 31;
+	localparam WRITEWAITL2= 32;
+	localparam WRITEWAITL3= 33;
 
 	wire haltinstruction = &instruction; // all ones
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
@@ -181,7 +175,7 @@
 			r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bit 28 is carry, bits [7;0] is aluop
 			r[15] <= start_address;
 			halted <= 0;
-			state <= START;
+			state <= FETCH;
 			instruction <= 0;
 		end else
 		if(halt | haltinstruction) begin
@@ -191,24 +185,24 @@
 			mem_waddr_next <= 2; // start address of register dump
 		end else
 			case(state)
-				START	:	begin
-								mem_raddr <= 0;
-								state <= START1w;
-							end
-				START1w	:	state <= START1;
-				START1	:	begin
-								r[2][15:8] <= mem_data_out; // no check for mem_ready yet
-								state <= START1b;
-							end
-				START1b	:	begin
-								mem_raddr <= 1;
-								state <= START2w;
-							end
-				START2w	:	state <= START2;
-				START2	:	begin
-								r[2][7:0] <= mem_data_out;
-								state <= FETCH;
-							end
+//				START	:	begin
+//								mem_raddr <= 0;
+//								state <= START1w;
+//							end
+//				START1w	:	state <= START1;
+//				START1	:	begin
+//								r[2][15:8] <= mem_data_out; // no check for mem_ready yet
+//								state <= START1b;
+//							end
+//				START1b	:	begin
+//								mem_raddr <= 1;
+//								state <= START2w;
+//							end
+//				START2w	:	state <= START2;
+//				START2	:	begin
+//								r[2][7:0] <= mem_data_out;
+//								state <= FETCH;
+//							end
 				FETCH	:	begin
 								r[13][31] <= 1; // force the always on bit
 								mem_raddr <= ip;
