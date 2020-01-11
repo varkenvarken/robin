@@ -72,12 +72,14 @@ class Opcode:
 			if self.immediate is None and self.longimmediate is None: raise NotImplementedError("%s does not support an immediate mode"%self.name)
 			if(len(values) != 2): raise ValueError("immediate mode takes 2 arguments")
 			if values[0] < 0 or values[0] > 15: raise ValueError("register not in range [0:15]")
-			try:
-				v = self.bytevalue_int(values[1])
-				return (self.immediate * 256 + values[0] * 256 + v ).to_bytes(2,'big')# checks if value fits 8 bit -128 : 255
-			except ValueError:
-				vbytes = self.longvalue(values[1])
-				return (self.longimmediate * 256 + values[0] * 256).to_bytes(2,'big') + vbytes # checks if value fits 32 bits
+			if self.immediate is not None:
+				try:
+					v = self.bytevalue_int(values[1])
+					return (self.immediate * 256 + values[0] * 256 + v ).to_bytes(2,'big')# checks if value fits 8 bit -128 : 255
+				except ValueError:
+					pass
+			vbytes = self.longvalue(values[1])
+			return (self.longimmediate * 256 + values[0] * 256).to_bytes(2,'big') + vbytes # checks if value fits 32 bits
 		elif self.implied is not None:
 			if values is not None: raise NotImplementedError("%s is implied and does not take an operand"%self.name)
 			return self.implied.to_bytes(2,'big')
@@ -199,8 +201,8 @@ opcode_list = [
 	 registers=0x40, immediate=0xc0, longimmediate=0x70),
   Opcode(name='LOADW', desc='MOVE R2 <- (R1+R0)w',
 	 registers=0x50, immediate=0xc0),
-  Opcode(name='LOADL', desc='MOVE R2 <- (R1+R0)l',
-	 registers=0x60, immediate=0xc0),
+  Opcode(name='LOADL', desc='MOVE R2 <- (R1+R0)l | #val',
+	 registers=0x60, longimmediate=0x70),
   Opcode(name='STOR', desc='MOVE R2 -> (R1+R0)b',
 	 registers=0x80),
   Opcode(name='STORW', desc='MOVE R2 -> (R1+R0)w',
@@ -264,7 +266,7 @@ def assemble(lines, debug=False):
 		'R9':9, 'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15,
 		'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
 		'r9':9, 'r10':10, 'r11':11, 'r12':12, 'r13':13, 'r14':14, 'r15':15,
-		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'aluop':13, 'ALUOP':13,'link':12, 'LINK':12,
+		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'aluop':13, 'ALUOP':13,'link':12, 'LINK':12, 'FRAME':11, 'frame':11,
 		'TMP2':3, 'TMP':2, 'RESULT':4,'tmp2':3, 'tmp':2, 'result':4,
 		# predefined labels for alu operations, lower case only
 		'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
