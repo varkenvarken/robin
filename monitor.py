@@ -425,6 +425,7 @@ class Monitor(cmd.Cmd):
 		if args[0] == '--hex' or args[0] == 'x':
 			try:
 				with open(args[1], 'r') as f:
+					ela = 0  # extended linear address
 					for line in f.readlines():
 						if line.startswith(':'):
 							line = line[1:].strip()
@@ -438,10 +439,15 @@ class Monitor(cmd.Cmd):
 								return False
 							if values[3] == 1 :
 								break  # end of file, we're done
+							elif values[3] == 4:
+								ela = (values[4] << 24) + (values[5] << 16)
+								print("ela",ela,line,values)
 							elif values[3] != 0:
 								print("cannot process record type", line)
 							else:  # a data record
 								addr = values[1] * 256 + values[2]
+								addr += ela
+								print("addr",addr)
 								chunk = values[0]
 								data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
 								self.ser.write(bytes(data))

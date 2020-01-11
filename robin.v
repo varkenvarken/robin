@@ -193,8 +193,8 @@ module top(
 	assign cpu_data_out= override_byte ? inbyte : (override_nbytes ? bytes_available : ram_data_out);
 
 	// first block [0,8k] (bram)
-	wire ram_write0 = (ram_waddr[MEM_ADDR_WIDTH-1:13] == 0) & ram_write;
-	wire ram_read0 = ram_raddr[MEM_ADDR_WIDTH-1:13] == 0;
+	wire ram_write0 = (ram_waddr[MEM_ADDR_WIDTH-1:13] == 5'b00000) & ram_write;
+	wire ram_read0 = ram_raddr[MEM_ADDR_WIDTH-1:13] == 5'b00000;
 	wire [LOWMEM_ADDR_WIDTH-1:0] ram_waddr0 = ram_waddr[LOWMEM_ADDR_WIDTH-1:0];
 	wire [LOWMEM_ADDR_WIDTH-1:0] ram_raddr0 = ram_raddr[LOWMEM_ADDR_WIDTH-1:0] ;
 	wire [7:0] ram_data_out0;
@@ -373,7 +373,7 @@ module top(
 						end
 					end
 			PREP:	begin
-						addr = {bytes[2],bytes[3]};
+						addr = {bytes[1],bytes[2],bytes[3]};
 						len  = {bytes[4],bytes[5]};
 						case(bytes[0][1:0])
 							1	: state <= LOAD0;

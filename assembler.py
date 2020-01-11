@@ -402,11 +402,20 @@ def assemble(lines, debug=False):
 	# return results as bytes
 	return code, labels, errors
 
+lastela = None
 def printrun(addr,code):
+	global lastela
+	# extended linear address (upper 16 bits of address)
+	a3 = ((addr>>24)&255)
+	a2 = ((addr>>16)&255)
+	ela = ":02000004%02x%02x%02x"%(a3,a2,((((2 + 4 + a3 + a2) & 255) ^ 255) + 1) & 255)
+	if ela != lastela:
+		print(ela)
+		lastela = ela
 	for start in range(0,len(code),128):  # chunks of max 128 bytes (we could go to 255)
 		chunk = code[start:start+128]
 		nbytes = len(chunk)
-		values = [nbytes,(addr+start)>>8,(addr+start)&255,0] + [int(b) for b in chunk]
+		values = [nbytes,((addr+start)>>8)&255,(addr+start)&255,0] + [int(b) for b in chunk]
 		values.append( (((sum(values) & 255) ^ 255) + 1) & 255 )
 		print(":" + "".join(["%02x"%v for v in values]))
 
