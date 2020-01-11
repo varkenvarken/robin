@@ -1,4 +1,5 @@
 import sys
+from re import split
 
 from pycparser import c_parser, c_ast, parse_file
 
@@ -36,13 +37,12 @@ class symbol:
         self.location = location        # None, integer rel to frame, register name
         self.pointerdepth = 0
         if stype is not None:
+            if type(stype) == c_ast.FuncDef:
+                stype = stype.decl.type.type
             while type(stype) == c_ast.PtrDecl:
                 self.pointerdepth += 1
                 stype = stype.type
-            if type(stype) == c_ast.FuncDef:    # TODO funcdef should deal with pointer depth as well
-                self.type = stype.decl.type.type.type.names[0]
-            else:
-                self.type = stype.type.names[0]
+            self.type = stype.type.names[0]
             self.size = 1 if self.type == 'char' else 4
 
     def deref(self):
@@ -60,14 +60,17 @@ class value:
     def __init__(self, rvalue, size, code, symbol=None):
         self.rvalue = rvalue
         self.size = size
-        self.vtype = None
+        self.vtype = 'int'
         self.pointerdepth = 0
         if symbol is not None:
             self.vtype = symbol.type
             self.pointerdepth = symbol.pointerdepth
         self.code = code
         self.symbol = symbol
-    
+
+    def ispointer(self):
+        return self.pointerdepth > 0
+
     def __repr__(self):
         return 'value(%s, %s, %s, %d, %r)' %(self.rvalue, self.size, self.vtype, self.pointerdepth, self.symbol)
 
@@ -81,22 +84,42 @@ symbols = dictstack()
 # locations of function definitions.
 class Visitor(c_ast.NodeVisitor):
     def generic_visit(self, node):
-        print('unknown node', node.__class__.__name__)
-        print(node)
+        print('unknown node', node.__class__.__name__, file=sys.stderr)
+        print(node, file=sys.stderr)
         
-        return value(True, None, "\n".join([self.visit(c) for c in node]))
+        return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
+
+    def codeformat(self, code):
+        lines = code.split('\n')
+        formatted = []
+        for line in lines:
+            elements = split(r'\t+',line)
+            n = len(elements)
+            if n <= 1:
+                f = "".join(elements) 
+            elif elements[0] == '':
+                if n > 2:
+                    f = "        " + "%-8s %-20s"%tuple(elements[1:3]) + " ".join(elements[3:])
+                else:
+                    f = "        " + "%-8s"%elements[1]
+            else:
+                f = " ".join(elements)
+            formatted.append(f)
+        return "\n".join(formatted)
 
     def visit_FileAST(self, node):
         global symbols
         symbols = dictstack()
-        print("\n".join([self.visit(item).code for item in node.ext]))
+        print("\n".join([self.codeformat(self.visit(item).code) for item in node.ext]))
 
     def visit_FuncDef(self, node):
+        #print(node, file=sys.stderr)
         symbols[node.decl.name] = symbol('global',None,node)  # TODO include signature and deal with forward declarations
         symbols.dup()
         preamble = [
-            '%s:\t; %s' % (node.decl.name, node.decl.coord),
+            ';',
+            '%s:\t\t\t\t; %s' % (node.decl.name, node.decl.coord),
             '\tpush\tframe\t\t; old frame pointer',
             '\tmove\tframe,sp,0\t; new frame pointer',
             '\tmove\tr4,0,0\t\t; zero out index'
@@ -128,7 +151,7 @@ class Visitor(c_ast.NodeVisitor):
             '\treturn'
             ]
         extra_space = [
-            '\tmover\tsp,sp,-%d\t\t; add space for auto variables'%symbols["#nauto#"], # TODO leave this out if there are zero auto variables
+            '\tmover\tsp,sp,-%d\t; add space for auto variables'%symbols["#nauto#"], # TODO leave this out if there are zero auto variables
         ]
         nregs = 0
         for r in ['r5','r6','r7','r8','r9','r10']:
@@ -145,11 +168,11 @@ class Visitor(c_ast.NodeVisitor):
             symbol = symbols[node.name]
             if symbol.storage == 'register':
                 result = [
-                    "\tmove\tr2,%3s,0\t; load %s (id node)"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
+                    "\tmove\tr2,%s,0\t\t; load %s"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
                 ]
             elif symbol.storage == 'auto':
                 result = [
-                    "\tmover\tr4,0,%d\t\t; load %s (id node)"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
+                    "\tmover\tr4,0,%d\t\t; load %s"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
                     "\tloadl\tr2,frame,r4"
                 ]
             else:
@@ -159,22 +182,74 @@ class Visitor(c_ast.NodeVisitor):
             print("Unknown local id %s"%node.name,file=sys.stderr)
             return value(False, 0, "")
 
+    def isnotzero(self, reg):  # prime candidate for creating a cpu intruction for
+        notzero = self.label('notzero')
+        end = self.label('zero_end')
+        return [
+            '\ttest\t%s\t\t; notzero?'%reg,
+            '\tbne\t%s'%notzero,
+            '\tmove\t%s,0,0'%reg,
+            '\tbra\t%s'%end,
+            notzero+':',
+            '\tmove\t%s,0,1'%reg,
+            end+':'
+        ]
+
     def visit_BinaryOp(self, node):
-        opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mul'}
-        if node.op in opmap:
-            islvalueleft, sizeleft, codeleft = self.visit(node.left)
-            islvalueright, sizeright, coderight = self.visit(node.right)
-            lvalue = isvalueleft
-            size = max(sizeleft, sizeright)
-            result = [
-                codeleft,
-                "\tpush\tr2\t\t; binop(%s)"%node.op,  # TODO widening
-                coderight,
-                "\tpop\tr3\t\t; binop(%s)"%node.op,
-                "\tload\tflags,#%s\t; binop(%s)"%(opmap[node.op], node.op),
-                "\talu\tr2,r3,r2"
-            ]
-            return value(lvalue, size, "\n".join(result))
+        alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mul', '/': 'alu_divs',
+            '==': 'alu_cmp', '<': 'alu_cmp', '>': 'alu_cmp', '>=': 'alu_cmp', '<=': 'alu_cmp', '!=': 'alu_cmp',
+            '&': 'alu_and', '|': 'alu_or','^': 'alu_xor',
+            '&&': 'alu_and', '||': 'alu_or',
+            }
+        post = self.label('post')
+        post2 = self.label('post')
+        post_map = {
+            '==' : ['\tbeq\t%s\t\t; equal'%post,'\tmove\tr2,0,0','\tbra\t%s'%post2,post+':','\tmove\tr2,0,1',post2+':'],
+            '<'  : ['\tbrm\t%s\t\t; less than'%post,'\tmove\tr2,0,0',post+':'],
+            '>'  : ['\tbrp\t%s\t\t; greater than'%post,'\tmove\tr2,0,0',post+':'],
+        }
+        if node.op in alu_opmap:
+            sl = self.visit(node.left)
+            sr = self.visit(node.right)
+            if sl.ispointer() and sr.ispointer() and node.op not in {'-', '<', '>', '>=', '<=', '==', '!=' }:
+                print("unsupported op %s for two pointers ignored"%node.op,file=sys.stderr)
+                return value(False, 0, "")
+            elif sl.ispointer() and node.op not in {'+', '-', '==', '!=' }:
+                print("unsupported op %s for pointer,value ignored"%node.op,file=sys.stderr)
+                return value(False, 0, "")
+            elif sr.ispointer() and node.op not in {'+', '==', '!=' }:
+                print("unsupported op %s for value,pointer ignored"%node.op,file=sys.stderr)
+                return value(False, 0, "")
+
+            endlabel = self.label('binop_end')
+            # note that results never need to be widened because internally we always work with 32 bit
+            result = [sl.code]
+            if node.op == '&&':
+                result.extend(self.isnotzero('r2'))
+                result.append('\ttest r2\t\t; && short circuit')
+                result.append('\tbeq\t%s'%endlabel)
+            if node.op == '||':
+                result.extend(self.isnotzero('r2'))
+                result.append('\ttest r2\t\t; || short circuit')
+                result.append('\tbne\t%s'%endlabel)
+            result.append("\tpush\tr2\t\t; binop(%s)"%node.op)
+            result.append(sr.code)
+            if node.op in {'&&', '||'}:
+                result.extend(self.isnotzero('r2'))
+            result.append("\tpop\tr3\t\t; binop(%s)"%node.op)
+            # actual alu op
+            result.append("\tload\tflags,#%s\t; binop(%s)"%(alu_opmap[node.op], node.op))
+            result.append("\talu\tr2,r3,r2")
+            # conversion to correct truth value
+            if node.op in post_map:
+                result.extend(post_map[node.op])
+            # end target of short circuit expression
+            if node.op in { '&&', '|| ' }:
+                result.append(endlabel+':')
+            # lvalue is converted to rvalue unless just the right hand side is a pointer
+            rvalue = True
+            if sl.ispointer() and not sr.ispointer(): rvalue = False
+            return value(rvalue, 4, "\n".join(result))
         else:
             print("Binary op %s ignored"%node.op,file=sys.stderr)
             return value(False, 0, "")
@@ -194,10 +269,10 @@ class Visitor(c_ast.NodeVisitor):
                 if symbol.storage == 'register':
                     reg = symbol.location
                     result.extend([
-                        '\tmove\t%s,%s,1\t; postinc'%(reg,reg),
+                        '\tmove\t%s,%s,1\t\t; postinc'%(reg,reg),
                     ])
                 else:
-                    print('postinc for storage other than register not implemented')
+                    print('postinc for storage other than register not implemented', file=sys.stderr)
             elif size == 4:
                 if symbol.storage == 'register':
                     reg = symbol.location
@@ -205,9 +280,9 @@ class Visitor(c_ast.NodeVisitor):
                         '\tmover\t%s,%s,1\t\t; postinc b'%(reg,reg),
                     ])
                 else:
-                    print('postinc for storage other than register not implemented')
+                    print('postinc for storage other than register not implemented', file=sys.stderr)
             else:
-                print('postinc for size != 1 or 4 not implemented')
+                print('postinc for size != 1 or 4 not implemented', file=sys.stderr)
             # postinc does not change the lvalue status or the pointer depth!
         elif node.op == '*':
             if isrvalue:
@@ -219,9 +294,9 @@ class Visitor(c_ast.NodeVisitor):
                         '\tload\tr2,r2,0\t\t; deref byte',
                     ])
                 else:
-                    print('postinc for storage other than register not implemented')
+                    print('postinc for storage other than register not implemented', file=sys.stderr)
             else:
-                print('postinc for size != 1 not implemented')
+                print('postinc for size != 1 not implemented', file=sys.stderr)
             symbol = symbol.deref()
             isrvalue = s.pointerdepth < 1
         return value(isrvalue, s.size, "\n".join(result), symbol)
@@ -237,7 +312,7 @@ class Visitor(c_ast.NodeVisitor):
         result = []
         if node.init is not None:
             s = self.visit(node.init)
-            result.append(s.code)  # TODO might need widening here
+            result.append(s.code)
         else:
             result.append('\tmove\tr2,0,0\t\t; missing initializer, default to 0')
         sym = symbols[node.name]
@@ -255,48 +330,52 @@ class Visitor(c_ast.NodeVisitor):
         return value(True, sym.size, "\n".join(result))
 
     def visit_Assignment(self, node):
+        #print(node, file=sys.stderr)
         result = []
-        result.append("; assignment %s"%node.coord)
         if node.op == '=':
-            result.append(self.visit(node.rvalue))
-            if node.lvalue.__class__.__name__ == 'ID':
-                if node.lvalue.name in symbols:
-                    sym = symbols[node.lvalue.name]
-                    if sym.storage == 'register':
-                        if sym.size == 4:
-                            result.append("\tstorl\tr2,%s,0\t; %s <- r2"%(sym.location,node.lvalue.name))
-                        else:
-                            result.append("\tstorb\tr2,%s,0\t; %s <- r2"%(sym.location,node.lvalue.name))
-                    else:
-                        result.append("\tload\tr4,#%d"%sym.location)
-                        if sym.size == 4:
-                            result.append("\tstorl\tr2,frame,r4\t; %s <- r2"%node.lvalue.name)
-                        else:
-                            result.append("\tstorb\tr2,frame,r4\t; %s <- r2"%node.lvalue.name)
-                else:
-                    result.append("Unknown local id %s"%node.lvalue.name,file=sys.stderr)
+            sr = self.visit(node.rvalue)
+            result.append(sr.code)
+            result.append('\tpush\tr2')
+            if type(node.lvalue) == c_ast.UnaryOp and node.lvalue.op == '*':
+                sl = self.visit(node.lvalue.expr)
             else:
-                print("lvalue not an ID",file=sys.stderr)
+                sl = self.visit(node.lvalue)
+            result.append(sl.code)
+            result.append('\tpop\tr3')
+            sym = sl.symbol
+            if not sl.rvalue:
+                if sym.storage == 'register':
+                    if sl.size == 4:
+                        result.append("\tstorl\tr3,r2,0\t; assign long")
+                    else:
+                        result.append("\tstorb\tr3,r2,0\t; assign byte")
+                else:
+                    result.append("\tload\tr4,#%d"%sym.location)
+                    if sym.size == 4:
+                        result.append("\tstorl\tr2,frame,r4\t; assign long")
+                    else:
+                        result.append("\tstorb\tr2,frame,r4\t; assign byte")
+                result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
+            else:
+                print("assignment to rvalue",file=sys.stderr)
         else:
             print("Assignment op %s ignored"%node.op,file=sys.stderr)
         return value(False, sym.size, "\n".join(result))
 
     def visit_Constant(self, node):
         result = []
-        result.append("; constant %s"%node.coord)
         size = 4
         if node.type == 'int':
             result.append("\tloadl\tr2,#%s\t\t; int"%node.value)
         elif node.type == 'char':
-            result.append("\tload\tr2,#%s\t\t; char"%node.value)
+            result.append("\tloadl\tr2,#%s\t\t; char, but loaded as int"%node.value)
             size = 1
         else:
             result.append("Constant of type %s ignored"%node.type)
         return value(False, size, "\n".join(result))
         
-    def visit_Return(self, node):
+    def visit_Return(self, node):  # TODO: should check that type matches return value of function
         result = []
-        result.append("; return %s"%node.coord)
         result.append(self.visit(node.expr).code)
         result.append("\tbra\t"+ symbols["#return#"])
         return value(False,0,"\n".join(result))
@@ -308,27 +387,24 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_If(self, node):
         result = []
-        result.append("; if")
-        result.append(self.visit(node.cond))
+        result.append(self.visit(node.cond).code)
         result.append("\ttest\tr2")
         endif_label = self.label("endif")
         if node.iffalse:
             else_label = self.label("else")
             result.append("\tbeq\t" + else_label)
-            result.append(self.visit(node.iftrue))
+            result.append(self.visit(node.iftrue).code)
             result.append("\tbra\t" + endif_label)
             result.append(else_label+":")
-            print(node.iffalse)
-            result.append(self.visit(node.iffalse))
+            result.append(self.visit(node.iffalse).code)
         else:
             result.append("\tbeq\t" + endif_label)
-            result.append(self.visit(node.iftrue))
+            result.append(self.visit(node.iftrue).code)
         result.append(endif_label+":")
         return value(False,0,"\n".join(result))
 
     def visit_While(self, node):
         result = []
-        result.append("; while")
         while_label = self.label("while")
         result.append(while_label+":")
         result.append(self.visit(node.cond).code)
@@ -345,10 +421,12 @@ class Visitor(c_ast.NodeVisitor):
         symbols.dup()
         for bi,item in enumerate(node.block_items):
             s = self.visit(item)
-            #print('>>>>>',bi,s,'<<<<<<<')
             result.append(s.code)
         symbols.discard()
         return value(False,0,"\n".join(result))
+
+    def visit_EmptyStatement(self, node):
+        return value(True,0,"\t;empty statement")
 
 def process(filename):
     # Note that cpp is used. Provide a path to your own cpp or
