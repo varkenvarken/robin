@@ -2,7 +2,7 @@ import sys
 
 from pycparser import c_parser, c_ast, parse_file
 
-class dictstack:  # not yet complete, should not realy dup but search down stack to make it possible to distinguish between redeclaration and shadowing
+class dictstack:  # not yet complete, must be able to distinguish between redeclaration and shadowing
     
     def __init__(self):
         self.stack = [{}]
@@ -128,7 +128,7 @@ class Visitor(c_ast.NodeVisitor):
             '\treturn'
             ]
         extra_space = [
-            '\tmover\tsp,-%d\t\t; add space for auto variables'%symbols["#nauto#"], # TODO leave this out if there are zero auto variables
+            '\tmover\tsp,sp,-%d\t\t; add space for auto variables'%symbols["#nauto#"], # TODO leave this out if there are zero auto variables
         ]
         nregs = 0
         for r in ['r5','r6','r7','r8','r9','r10']:
@@ -181,7 +181,7 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_UnaryOp(self, node):
         s = self.visit(node.expr)
-        print('unop',node.op,s)
+        #print('unop',node.op,s, file=sys.stderr)
         result = [s.code]
         isrvalue = s.rvalue
         symbol = s.symbol
@@ -216,7 +216,7 @@ class Visitor(c_ast.NodeVisitor):
             if size == 1:
                 if symbol.storage == 'register':
                     result.extend([
-                        '\tloadb\tr2,r2,0\t\t; deref byte',
+                        '\tload\tr2,r2,0\t\t; deref byte',
                     ])
                 else:
                     print('postinc for storage other than register not implemented')
@@ -286,9 +286,9 @@ class Visitor(c_ast.NodeVisitor):
         result.append("; constant %s"%node.coord)
         size = 4
         if node.type == 'int':
-            result.append("\tloadl\tr2,#%s"%node.value)
+            result.append("\tloadl\tr2,#%s\t\t; int"%node.value)
         elif node.type == 'char':
-            result.append("\tloadb\tr2,#%s"%node.value)
+            result.append("\tload\tr2,#%s\t\t; char"%node.value)
             size = 1
         else:
             result.append("Constant of type %s ignored"%node.type)
@@ -356,7 +356,7 @@ def process(filename):
     ast = parse_file(filename, use_cpp=True,
                      cpp_args=r'-Iutils/fake_libc_include')
 
-    print(ast)
+    #print(ast, file=sys.stderr)
 
     v = Visitor()
     v.visit(ast)
