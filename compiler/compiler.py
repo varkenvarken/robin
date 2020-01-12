@@ -78,10 +78,13 @@ labelcount = 0
 
 symbols = dictstack()
 
+
 # TODO create another visitor that runs first and does constant folding etc.
 
 # A simple visitor for FuncDef nodes that prints the names and
 # locations of function definitions.
+
+
 class Visitor(c_ast.NodeVisitor):
     def generic_visit(self, node):
         print('unknown node', node.__class__.__name__, file=sys.stderr)
