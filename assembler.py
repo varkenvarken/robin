@@ -146,19 +146,23 @@ class Opcode:
 
 	@staticmethod
 	def wordvalue(v):
+		if type(v) == str:
+			v = ord(v)
 		if v < -2**15 or v > 2**16-1:
 			raise ValueError()
 		return v.to_bytes(2, 'big', signed=v<0)
 
 	@staticmethod
 	def longvalue(v):
+		if type(v) == str:
+			v = ord(v)
 		if v < -2**31 or v > 2**32-1:
 			raise ValueError()
 		return v.to_bytes(4, 'big', signed=v<0)
 
 	@staticmethod
-	def longaddress(v):    # long means fit for our address space of 8K i.e. 2^13
-		if v < 0 or v > 2**13-1:
+	def longaddress(v):    # long means fit for our address space of 256K i.e. 2^18
+		if v < 0 or v > 2**18-1:
 			raise ValueError()
 		return v.to_bytes(2,'big')
 
