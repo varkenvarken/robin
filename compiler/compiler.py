@@ -100,9 +100,9 @@ class Visitor(c_ast.NodeVisitor):
                 f = "".join(elements) 
             elif elements[0] == '':
                 if n > 2:
-                    f = "        " + "%-8s %-20s"%tuple(elements[1:3]) + " ".join(elements[3:])
+                    f = "        " + "%-7s %-20s"%tuple(elements[1:3]) + " ".join(elements[3:])
                 else:
-                    f = "        " + "%-8s"%elements[1]
+                    f = "        " + "%-7s"%elements[1]
             else:
                 f = " ".join(elements)
             formatted.append(f)
@@ -112,6 +112,7 @@ class Visitor(c_ast.NodeVisitor):
         global symbols
         symbols = dictstack()
         print("\n".join([self.codeformat(self.visit(item).code) for item in node.ext]))
+        print("\n; room for stack\n        stackdef")
 
     def visit_FuncDef(self, node):
         #print(node, file=sys.stderr)
@@ -133,7 +134,7 @@ class Visitor(c_ast.NodeVisitor):
             if len(registers):
                 symbols[arg.name] = symbol('register', registers.pop(),arg.type)
                 movreg.append('\tload\tr4,#%d\t\t; init argument %s'%(r*4,arg.name))
-                movreg.append('\tmove\t%s,frame,r4'%symbols[arg.name].location)
+                movreg.append('\tloadl\t%s,frame,r4'%symbols[arg.name].location)
                 r = r + 1
             else:
                 symbols[arg.name] = symbol('auto', n + 1, arg.type)  # skip over pushed frame pointer and caller return address
@@ -264,16 +265,17 @@ class Visitor(c_ast.NodeVisitor):
         result = [s.code]
         isrvalue = s.rvalue
         symbol = s.symbol
+        print(node,s,file=sys.stderr)
         if node.op == 'p++':
             if isrvalue:
                 raise ValueError('postinc op on rvalue')
             # pointers themselves are 4 bytes so a pointer depth of 1 actualy points to something with a possible different size
-            size = s.size if s.pointerdepth == 1 else 4
+            size = s.size if s.pointerdepth == 1 else (4 if s.pointerdepth > 1 else 1)
             if size == 1:
                 if symbol.storage == 'register':
                     reg = symbol.location
                     result.extend([
-                        '\tmove\t%s,%s,1\t\t; postinc'%(reg,reg),
+                        '\tmove\t%s,%s,1\t\t; postinc ptr to byte or value'%(reg,reg),
                     ])
                 else:
                     print('postinc for storage other than register not implemented', file=sys.stderr)
@@ -281,7 +283,7 @@ class Visitor(c_ast.NodeVisitor):
                 if symbol.storage == 'register':
                     reg = symbol.location
                     result.extend([
-                        '\tmover\t%s,%s,1\t\t; postinc b'%(reg,reg),
+                        '\tmover\t%s,%s,1\t\t; postinc ptr to 4byte'%(reg,reg),
                     ])
                 else:
                     print('postinc for storage other than register not implemented', file=sys.stderr)
@@ -295,7 +297,9 @@ class Visitor(c_ast.NodeVisitor):
             if size == 1:
                 if symbol.storage == 'register':
                     result.extend([
-                        '\tload\tr2,r2,0\t\t; deref byte',
+                        '\tmove\tr3,0,0',
+                        '\tload\tr3,r2,0\t\t; deref byte',
+                        '\tmove\tr2,r3,0'
                     ])
                 else:
                     print('postinc for storage other than register not implemented', file=sys.stderr)
@@ -308,15 +312,18 @@ class Visitor(c_ast.NodeVisitor):
     # TODO argument type checking
     def visit_FuncCall(self, node):
         result = []
+        nargs = 0
         for expr in reversed(node.args.exprs):
             v = self.visit(expr)
             result.append(v.code)
             result.append('\tpush\tr2')
+            nargs += 1
         result.append('\tpush\tlink')
         v = self.visit(node.name)
         result.append(v.code)
-        result.append('\tjal\tr2,0')
+        result.append('\tjal\tlink,r2,0')
         result.append('\tpop\tlink')
+        result.append('\tmover\tsp,sp,%d'%nargs)
         rvalue = True  # should depend on return type of function
         return value(rvalue, 4, "\n".join(result))
 
@@ -367,13 +374,13 @@ class Visitor(c_ast.NodeVisitor):
                     if sl.size == 4:
                         result.append("\tstorl\tr3,r2,0\t; assign long")
                     else:
-                        result.append("\tstorb\tr3,r2,0\t; assign byte")
+                        result.append("\tstor\tr3,r2,0\t; assign byte")
                 else:
                     result.append("\tload\tr4,#%d"%sym.location)
                     if sym.size == 4:
                         result.append("\tstorl\tr2,frame,r4\t; assign long")
                     else:
-                        result.append("\tstorb\tr2,frame,r4\t; assign byte")
+                        result.append("\tstor\tr2,frame,r4\t; assign byte")
                 result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
             else:
                 print("assignment to rvalue",file=sys.stderr)
