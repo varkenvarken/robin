@@ -3,3 +3,6 @@
 /Attic/*
 /robin.asc
 /robin.json
+/assemblertest/*.hex
+/assemblertest/*.bin
+/testoutput/*
