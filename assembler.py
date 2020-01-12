@@ -67,7 +67,9 @@ class Opcode:
 			if len(values) > 1 and values[1].startswith('#'):
 				immediate = True
 				values[1] = values[1][1:]
+			#print(values, file=sys.stderr)
 			values = [eval(op,globals(),labels) for op in values]
+			#print(["%x"%v for v in values], file=sys.stderr)
 		if immediate:
 			if self.immediate is None and self.longimmediate is None: raise NotImplementedError("%s does not support an immediate mode"%self.name)
 			if(len(values) != 2): raise ValueError("immediate mode takes 2 arguments")
@@ -85,6 +87,7 @@ class Opcode:
 			return self.implied.to_bytes(2,'big')
 		elif self.relative is not None:
 			if(len(values)>1): raise ValueError("relative mode takes 1 value only") 
+			#print(values[0] - (address+2),values[0],(address+2), file=sys.stderr)
 			return self.relative.to_bytes(1,'big') + self.signedbytevalue(values[0] - (address+2)).to_bytes(1,'big', signed=True)  # checks if value fits 8 bit  -128 : 127
 		elif self.registers is not None:
 			if(len(values) != 3): raise ValueError("registers mode takes 3 values")
@@ -180,6 +183,7 @@ class Opcode:
 			elif self.longs:
 				return nvalues * 4
 		else:
+			opl = 2
 			if operand != '':
 				values = [op.strip() for op in operand.split(',')]
 				if len(values) > 1 and values[1].startswith('#'):
@@ -187,10 +191,12 @@ class Opcode:
 					try:  # could also fail on a forward label reference in which case we assume an address ref and therefore a long
 						values = [eval(op,globals(),labels) for op in values]
 						v = self.bytevalue_int(values[1])
-						return 2
+						if not self.immediate : # this implies only a longimmediate, like on LOADL
+							opl = 6
 					except:
-						return 6
-			return 2
+						opl = 6
+			#print(self.name, operand, opl, file=sys.stderr)
+			return opl
 
 opcode_list = [
   Opcode(name='MOVE', desc='MOVE R2 <- R1+R0',
@@ -339,7 +345,7 @@ def assemble(lines, debug=False):
 								lines.insert(0,(fname,fno,l))
 							continue
 						else:
-							#print(opcode,operand,file=sys.stderr)
+							#print(opcode,operand,addr,opcode.length(operand, labels),file=sys.stderr)
 							addr+=opcode.length(operand, labels)  # this does also cover byte,byte0 and word,word0,long,long0 directives
 					except KeyError:
 						print("Error: %s[%d] unknown opcode %s"%(filename, linenumber, op), file=sys.stderr)
@@ -350,6 +356,8 @@ def assemble(lines, debug=False):
 		except Exception as e:
 			raise e
 		processed_lines.append((filename, linenumber, line))
+
+	#print(labels, file=sys.stderr)
 
 	#pass 2, label bit is the same except we generate errors when we cannot resolve
 	code=bytearray()
