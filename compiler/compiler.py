@@ -175,6 +175,10 @@ class Visitor(c_ast.NodeVisitor):
                     "\tmover\tr4,0,%d\t\t; load %s"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
                     "\tloadl\tr2,frame,r4"
                 ]
+            elif symbol.storage == 'global':
+                result = [
+                    "\tloadl\tr2,#%s\t\t; load global symbol"%node.name
+                ]
             else:
                 print('Unexpected symbol storage %s with ID %s'%(symbol.storage,node.name),file=sys.stderr)
             return value(False, symbol.size, "\n".join(result), symbol)
@@ -300,6 +304,21 @@ class Visitor(c_ast.NodeVisitor):
             symbol = symbol.deref()
             isrvalue = s.pointerdepth < 1
         return value(isrvalue, s.size, "\n".join(result), symbol)
+
+    # TODO argument type checking
+    def visit_FuncCall(self, node):
+        result = []
+        for expr in reversed(node.args.exprs):
+            v = self.visit(expr)
+            result.append(v.code)
+            result.append('\tpush\tr2')
+        result.append('\tpush\tlink')
+        v = self.visit(node.name)
+        result.append(v.code)
+        result.append('\tjal\tr2,0')
+        result.append('\tpop\tlink')
+        rvalue = True  # should depend on return type of function
+        return value(rvalue, 4, "\n".join(result))
 
     def visit_Decl(self, node):
         registers = symbols["#registers#"]

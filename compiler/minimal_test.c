@@ -19,13 +19,17 @@ char *strchr(const char *str, int c){
 	return 0; // we are not ready yet to have NULL or (void *)0 here; for that we need casts
 }
 
+int signum(const int a){
+	return (a > 0) - (a < 0);
+}
+
 int strcmp(const char *str1, const char *str2){
 	while(*str1 && *str2){
 		if(*str1 == *str2){
 			str1++;
 			str2++;
 		}else{
-			return *str1 - *str2;  // strictly not correct value should be [-1,0,1]
+			return signum(*str1 - *str2);
 		}
 	}
 	if(!*str1) return  1;
