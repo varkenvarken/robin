@@ -114,6 +114,7 @@ class Visitor(c_ast.NodeVisitor):
     def visit_FileAST(self, node):
         global symbols
         symbols = dictstack()
+        print("\n        loadl    sp,#stack")
         print("\n".join([self.codeformat(self.visit(item).code) for item in node.ext]))
         print("\n; room for stack\n        stackdef")
 
@@ -133,15 +134,16 @@ class Visitor(c_ast.NodeVisitor):
         n = 1
         r = 2
         movreg = []
-        for arg in node.decl.type.args:
-            if len(registers):
-                symbols[arg.name] = symbol('register', registers.pop(),arg.type)
-                movreg.append('\tload\tr4,#%d\t\t; init argument %s'%(r*4,arg.name))
-                movreg.append('\tloadl\t%s,frame,r4'%symbols[arg.name].location)
-                r = r + 1
-            else:
-                symbols[arg.name] = symbol('auto', n + 1, arg.type)  # skip over pushed frame pointer and caller return address
-                n += 1
+        if node.decl.type.args is not None:
+            for arg in node.decl.type.args:
+                if len(registers):
+                    symbols[arg.name] = symbol('register', registers.pop(),arg.type)
+                    movreg.append('\tload\tr4,#%d\t\t; init argument %s'%(r*4,arg.name))
+                    movreg.append('\tloadl\t%s,frame,r4'%symbols[arg.name].location)
+                    r = r + 1
+                else:
+                    symbols[arg.name] = symbol('auto', n + 1, arg.type)  # skip over pushed frame pointer and caller return address
+                    n += 1
         symbols["#nargs#"] = n
         symbols["#nauto#"] = 0
         symbols["#registers#"] = registers
@@ -209,13 +211,16 @@ class Visitor(c_ast.NodeVisitor):
             '&': 'alu_and', '|': 'alu_or','^': 'alu_xor',
             '&&': 'alu_and', '||': 'alu_or',
             }
+
         post = self.label('post')
         post2 = self.label('post')
         post_map = {
             '==' : ['\tbeq\t%s\t\t; equal'%post,'\tmove\tr2,0,0','\tbra\t%s'%post2,post+':','\tmove\tr2,0,1',post2+':'],
-            '<'  : ['\tbrm\t%s\t\t; less than'%post,'\tmove\tr2,0,0',post+':'],
+            '<'  : ['\tbrp\t%s\t\t; less than (reversed operands)'%post,'\tmove\tr2,0,0',post+':'],
             '>'  : ['\tbrp\t%s\t\t; greater than'%post,'\tmove\tr2,0,0',post+':'],
         }
+        reversed_operands = { '<' }
+
         if node.op in alu_opmap:
             sl = self.visit(node.left)
             sr = self.visit(node.right)
@@ -247,7 +252,10 @@ class Visitor(c_ast.NodeVisitor):
             result.append("\tpop\tr3\t\t; binop(%s)"%node.op)
             # actual alu op
             result.append("\tload\tflags,#%s\t; binop(%s)"%(alu_opmap[node.op], node.op))
-            result.append("\talu\tr2,r3,r2")
+            if node.op in reversed_operands:
+                result.append("\talu\tr2,r2,r3")
+            else:
+                result.append("\talu\tr2,r3,r2")
             # conversion to correct truth value
             if node.op in post_map:
                 result.extend(post_map[node.op])
@@ -268,7 +276,7 @@ class Visitor(c_ast.NodeVisitor):
         result = [s.code]
         isrvalue = s.rvalue
         symbol = s.symbol
-        print(node,s,file=sys.stderr)
+        #print(node,s,file=sys.stderr)
         if node.op == 'p++':
             if isrvalue:
                 raise ValueError('postinc op on rvalue')
