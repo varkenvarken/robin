@@ -28,9 +28,9 @@
 	output is_negative
 	);
 
-	wire [32:0] add = {0, a} + {0, b};
+	wire [32:0] add = {0, a + b};
 	wire [32:0] adc = add + { 32'd0, carry_in};
-	wire [32:0] sub = {0, a} - {0, b};
+	wire [32:0] sub = {0, a - b};
 	wire [32:0] sbc = sub - { 32'd0, carry_in};
 	wire [32:0] b_and = {0, a & b};
 	wire [32:0] b_or  = {0, a | b};
@@ -38,7 +38,7 @@
 	wire [32:0] b_not = {0,~a    };
 	wire [32:0] extend = {a[31],a};
 	wire [32:0] min_a = -extend;
-	wire [32:0] cmp = sub[32] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
+	wire [32:0] cmp = sub[31] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
 	wire [32:0] shiftl = {a[31:0],1'b0};
 	wire [32:0] shiftr = {a[0],1'b0,a[31:1]};
 	wire [31:0] mult_al_bl = a[15: 0] * b[15: 0];
