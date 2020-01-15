@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
- 
+
  module cpu(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_ready, start_address, reset, halt, halted);
 	parameter addr_width = 9;
 	input clk;
@@ -33,6 +33,7 @@
 
 	// general registers
 	reg [31:0] r[0:15];
+	reg [31:0] temp;
 
 	// special registers
 	reg [15:0] instruction;
@@ -123,6 +124,8 @@
 	localparam WAIT			= 24;
 	localparam HALT			= 25;
 	localparam HALTED		= 26;
+	localparam WAIT2		= 27;
+	localparam WAIT3		= 28;
 
 	wire haltinstruction = &instruction; // all ones
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
@@ -139,6 +142,7 @@
 	wire [31:0] relative = {{24{immediate[7]}},immediate}; // 8 bit sign extended to 32
 	wire [31:0] branchtarget = r[15] + relative;
 	wire takebranch = ((r[13][31:29] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
+	wire longbranch = (immediate == 8'b0) & (cmd == CMD_BRANCH);
 
 	wire [31:0] sumr1r0 = r[R1] + r[R0];
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
@@ -262,7 +266,15 @@
 													if(writable_destination) r[R2][7:0] <= immediate;
 												end
 									CMD_BRANCH:	begin
-													if(takebranch) r[15] <= branchtarget;
+													if(longbranch) begin
+														r[15] <= r[15] + 4;
+														if(takebranch) begin
+															mem_raddr <= r[15];
+															state <= LOADLw;
+														end
+													end else if(takebranch) begin
+														r[15] <= branchtarget;
+													end
 												end
 									CMD_JUMP:	begin
 													if(writable_destination) r[R2] <= r[15];
@@ -277,26 +289,39 @@
 							end
 				LOADLw	:	state <= LOADL1;
 				LOADL1	:	begin
-								if(writable_destination) r[R2][31:24] <= mem_data_out;
+								if(longbranch)
+									temp[31:24] <= mem_data_out;
+								else if(writable_destination)
+									r[R2][31:24] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOADLw2;
 							end
 				LOADLw2	:	state <= LOADL2;
 				LOADL2	:	begin
-								if(writable_destination) r[R2][23:16] <= mem_data_out;
+								if(longbranch)
+									temp[23:16] <= mem_data_out;
+								else if(writable_destination)
+									r[R2][23:16] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOADWw;
 							end
 				LOADWw	:	state <= LOADW1;
 				LOADW1	:	begin
-								if(writable_destination) r[R2][15:8] <= mem_data_out;
+								if(longbranch)
+									temp[15:8] <= mem_data_out;
+								else if(writable_destination)
+									r[R2][15:8] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOAD1w;
 							end
 				LOAD1w	:	state <= LOAD1;
 				LOAD1	:	begin
-								if(writable_destination) r[R2][7:0] <= mem_data_out;
 								state <= FETCH;
+								if(longbranch) begin
+									temp[7:0] <= mem_data_out;
+									state <= WAIT;
+								end else if(writable_destination)
+									r[R2][7:0] <= mem_data_out;
 							end
 				WRITEWAITL:	begin
 								mem_write <= 1;
@@ -329,7 +354,17 @@
 								mem_write <= 1;
 								state <= WAIT;
 							end
-				WAIT	:	state <= FETCH;
+				WAIT	:	begin
+								if(longbranch)
+									state <= WAIT2;
+								else
+									state <= FETCH;
+							end
+				WAIT2	:	begin
+								r[15] <= r[15] + temp;
+								state <= WAIT3;
+							end
+				WAIT3	:	state <= FETCH;
 				HALT	:	begin
 								state <= HALTED;
 							end
