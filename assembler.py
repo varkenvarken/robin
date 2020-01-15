@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 #  An assembler for the robin cpu  (c) 2019 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify
