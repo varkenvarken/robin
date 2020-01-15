@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+#
 #  monitor.py (c) 2019 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -755,4 +757,10 @@ if __name__ == '__main__':
 		m.dev = sorted([p.device for p in list_ports.comports() if p.vid == 0x0403 and p.pid == 0x6010])[-1]
 	m.prompt = '' if args.test else '>'
 	m.scriptmode = args.test
-	m.cmdloop()
+	while True :
+		try:
+			m.cmdloop()
+			break
+		except KeyboardInterrupt:
+			pass
+
