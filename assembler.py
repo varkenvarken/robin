@@ -37,7 +37,7 @@ import sys
 class Opcode:
 	def __init__(self, name, desc='',
 			registers=None, register=None, regsidx=None, implied=None, immediate=None, longimmediate=None, relative=None, 
-			data=False, bytes=True, words=False, longs=False, addzero=True,
+			data=False, bytes=True, words=False, longs=False, addzero=True, cmd=0,
 			userdefined=None, parameters=[]):
 		self.name = name.upper()
 		self.desc = desc
@@ -55,6 +55,7 @@ class Opcode:
 		self.addzero = addzero
 		self.userdefined = userdefined
 		self.parameters = parameters
+		self.cmd = cmd
 
 	def __str__(self):
 		return self.name
@@ -103,7 +104,7 @@ class Opcode:
 			if(len(values) != 1): raise ValueError("register mode takes 1 value")
 			for v in values:
 				if v<0 or v>15: raise ValueError("register not in range [0:15]") 
-			return (self.register * 256 + values[0]*256).to_bytes(2,'big')
+			return (self.register * 256 + values[0]*256 + self.cmd).to_bytes(2,'big')
 		elif self.regsidx is not None:
 			if(len(values) != 3): raise ValueError("register index mode takes 3 values")
 			for v in values[:2]:
@@ -245,7 +246,11 @@ opcode_list = [
   Opcode(name='JAL', desc='R2 <- PC;  PC <- R1+R0',
 	 registers=0xe0),
   Opcode(name='MARK', desc='R2 <- counter',
-	 register=0xf0),
+	 register=0xf0, cmd=0),
+  Opcode(name='PUSH', desc='SP <- SP -4; (SP) <- R2',
+	 register=0xf0, cmd=2),
+  Opcode(name='POP', desc='R2 <- (SP); SP <- SP + 4',
+	 register=0xf0, cmd=1),
   Opcode(name='HALT', desc='halt and dump registers at 0x0002',
 	 implied=0xffff),
   Opcode(name='MOVER', desc='MOVE R2 <- R1+extend(4*r0)',

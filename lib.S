@@ -12,16 +12,6 @@
 	jal 0,link,0
 #end
 
-#define push x
-	mover sp,sp,-1
-	storl ${x},sp,0
-#end
-
-#define pop x
-	loadl ${x},sp,0
-	mover sp,sp,1
-#end
-
 #define sub z,x,y
 	load aluop,#alu_sub
 	alu ${z},${x},${y}
