@@ -87,7 +87,7 @@
 	);
 
 	// cycle counter
-	reg [31:0] counter;
+	reg [15:0] counter;
 	always @(posedge clk) begin
 		if(reset)
 			counter <= 0;
@@ -113,7 +113,7 @@
 	localparam LOADL1		= 13;
 	localparam LOADLw2		= 14;
 	localparam LOADL2		= 15;
-	localparam WRITEWAIT	= 16;
+	localparam WRITEWAIT	= 16; // unused
 	localparam WRITEWAITB	= 17;
 	localparam WRITEWAITW	= 18;
 	localparam WRITEWAITW1	= 19;
@@ -126,9 +126,13 @@
 	localparam HALTED		= 26;
 	localparam WAIT2		= 27;
 	localparam WAIT3		= 28;
+	localparam WAIT4		= 31;
 
 	wire haltinstruction = &instruction; // all ones
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
+
+	reg pop;
+	reg push;
 
 	wire [3:0] cmd = instruction[15:12]; // main opcode
 	wire [3:0] R2  = instruction[11: 8]; // destination register
@@ -183,6 +187,8 @@
 								r[13][31] <= 1; // force the always on bit
 								mem_raddr <= ip;
 								state <= FETCH1w;
+								pop <= 0;
+								push <= 0;
 							end
 				FETCH1w	:	state <= FETCH1;
 				FETCH1	:	begin
@@ -280,9 +286,21 @@
 													if(writable_destination) r[R2] <= r[15];
 													r[15] <= sumr1r0;
 												end
-									CMD_SPECIAL:begin // no additional selection on subcommands yet
-													if(writable_destination) r[R2] <= counter;
+									CMD_SPECIAL:begin
 													state <= FETCH;
+													case(immediate)
+														8'd0:	if(writable_destination) r[R2] <= {16'b0, counter};
+														8'd1:	begin
+																	mem_raddr <= r[14];
+																	state <= LOADLw;
+																	pop <= 1;
+																end
+														8'd2:	begin
+																	r[14] <= r[14] - 4;
+																	state <= WAIT4;
+																end
+														default: state <= FETCH;
+													endcase
 												end
 									default: state <= FETCH;
 								endcase
@@ -295,6 +313,7 @@
 									r[R2][31:24] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOADLw2;
+								if(pop) r[14] <= r[14] + 4;
 							end
 				LOADLw2	:	state <= LOADL2;
 				LOADL2	:	begin
@@ -322,6 +341,11 @@
 									state <= WAIT;
 								end else if(writable_destination)
 									r[R2][7:0] <= mem_data_out;
+							end
+				WAIT4:		begin
+								mem_waddr <= r[14];
+								mem_data_in <= r[R2][31:24];
+								state <= WRITEWAITL;
 							end
 				WRITEWAITL:	begin
 								mem_write <= 1;
