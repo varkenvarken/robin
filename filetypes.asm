@@ -21,9 +21,9 @@ extintructions=keyword_4
 [keywords]
 # all items must be in one line
 # this is by default a very simple instruction set
-instructions=load loadw loadl stor storw storl move mover alu jal bra brm brp beq bne mark halt
+instructions=load loadw loadl stor storw storl move mover alu jal bra brm brp beq bne mark halt pop push
 registers=r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r14 pc sp link frame
-directives=byte byte0 word word0 long long0 return call pop push
+directives=byte byte0 word word0 long long0 return call
 
 [settings]
 # default extension used when saving files
