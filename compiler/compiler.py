@@ -119,7 +119,7 @@ class Visitor(c_ast.NodeVisitor):
     """class to generate code"""
 
     def generic_visit(self, node):
-        print('unknown node', node.__class__.__name__, file=sys.stderr)
+        print('unknown node', node.__class__.__name__, node, file=sys.stderr)
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
@@ -353,6 +353,21 @@ class Visitor(c_ast.NodeVisitor):
                 print('postinc for size != 1 not implemented', file=sys.stderr)
             symbol = symbol.deref()
             isrvalue = s.pointerdepth < 1
+        return value(isrvalue, s.size, "\n".join(result), symbol)
+
+    def visit_ArrayRef(self, node):
+        s = self.visit(node.name)
+        sub = self.visit(node.subscript)
+        result = [s.code, '\tpush\tr2', sub.code]
+        if s.size == 4:
+            result.extend(['\tmove\tr2,r2,r2\t\t; multiply by 2','\tmove\tr2,r2,r2\t\t; multiply by 2'])
+        result.append('\tpop\tr3')
+        if s.size == 4:
+            result.append('\tloadl\tr2,r2,r3')
+        else:
+            result.append('\tload\tr2,r2,r3')
+        isrvalue = s.rvalue
+        symbol = s.symbol
         return value(isrvalue, s.size, "\n".join(result), symbol)
 
     # TODO argument type checking
