@@ -1,8 +1,9 @@
 ; dump r0 - r13 + sp to address 0x80
+firmwarestart= 0x2000 ; a definition, not a label becase this block will be moved
 dumpaddress= 0x80
 dumpregisters:
 	storl sp,0,0
-	load sp,#stack
+	loadl sp,#dumpaddress ; stack will grow downwards from dumpaddresses
 	push r3
 	push r2
 	move r2,0,0
@@ -40,4 +41,3 @@ dumpregisters:
 	loadl r3,0,0    ; original stackpointer was saved to address 0
 	storl r3,r2,0
 	halt
-	stackdef
