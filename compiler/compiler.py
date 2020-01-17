@@ -37,24 +37,37 @@ class symbol:
         self.location = location        # None, integer rel to frame, register name
         self.pointerdepth = 0
         self.nocode = False
+        self.alloc = False
+        self.allocbytes = 0
+
         if stype is not None:
             #print(stype, file=sys.stderr)
         
+            arrayalloc = None
             if type(stype) == c_ast.FuncDef:
                 stype = stype.decl.type.type
             elif type(stype) == c_ast.Decl:
+                init = stype.init
                 stype = stype.type
                 if type(stype) == c_ast.FuncDecl:
                     stype = stype.type
                     self.nocode = True
+                elif type(stype) == c_ast.ArrayDecl:
+                    if init is None:
+                        arrayalloc = stype.dim
+                    stype = stype.type
 
             while type(stype) == c_ast.PtrDecl:
                 self.pointerdepth += 1
                 stype = stype.type
-                
 
             self.type = stype.type.names[0]
             self.size = 1 if self.type == 'char' else 4
+
+            if arrayalloc is not None:
+                ev = ExprVisitor()
+                self.alloc = True
+                self.allocbytes = ev.visit(arrayalloc) * self.size
 
     def deref(self):
         ds = symbol(self.storage, self.location)
@@ -92,7 +105,19 @@ scope = 0 # file
 
 # TODO create another visitor that runs first and does constant folding etc.
 
+class ExprVisitor(c_ast.NodeVisitor):
+    """class to evaluate compile time expressions"""
+
+    def generic_visit(self, node):
+        print('unknown node', node.__class__.__name__, file=sys.stderr)
+        return None
+
+    def visit_Constant(self, node):
+        return int(node.value)   # TODO make this smarter
+        
 class Visitor(c_ast.NodeVisitor):
+    """class to generate code"""
+
     def generic_visit(self, node):
         print('unknown node', node.__class__.__name__, file=sys.stderr)
         
@@ -349,6 +374,7 @@ class Visitor(c_ast.NodeVisitor):
         return value(rvalue, 4, "\n".join(result))
 
     def visit_Decl(self, node):
+        #print(node,file=sys.stderr)
         result = []
         if "#registers#" in symbols:  # function scope
             registers = symbols["#registers#"]
@@ -385,6 +411,11 @@ class Visitor(c_ast.NodeVisitor):
                 result.append(s.code)
             elif sym.nocode:
                 pass
+            elif sym.alloc:
+                if sym.size == 4:
+                    result.append('\tlong\t%s'%(",".join(['0']*(sym.allocbytes//4))))
+                else:
+                    result.append('\tbyte\t"%s"'%("".join(['\\0']*sym.allocbytes)))
             else:
                 result.append('\tlong 0\t\t; missing initializer, default to 0')
         return value(True, sym.size, "\n".join(result))
