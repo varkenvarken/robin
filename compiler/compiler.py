@@ -36,12 +36,23 @@ class symbol:
         self.storage = storage  # global, auto, register
         self.location = location        # None, integer rel to frame, register name
         self.pointerdepth = 0
+        self.nocode = False
         if stype is not None:
+            #print(stype, file=sys.stderr)
+        
             if type(stype) == c_ast.FuncDef:
                 stype = stype.decl.type.type
+            elif type(stype) == c_ast.Decl:
+                stype = stype.type
+                if type(stype) == c_ast.FuncDecl:
+                    stype = stype.type
+                    self.nocode = True
+
             while type(stype) == c_ast.PtrDecl:
                 self.pointerdepth += 1
                 stype = stype.type
+                
+
             self.type = stype.type.names[0]
             self.size = 1 if self.type == 'char' else 4
 
@@ -54,7 +65,7 @@ class symbol:
         return ds
         
     def __repr__(self):
-        return 'symbol(%s, %s, %s, %d, %d)' %(self.storage, str(self.location), self.type, self.pointerdepth, self.size)
+        return 'symbol(%s, %s, %s, %d, %d, %s)' %(self.storage, str(self.location), self.type, self.pointerdepth, self.size, self.nocode)
 
 class value:
     def __init__(self, rvalue, size, code, symbol=None):
@@ -77,18 +88,13 @@ class value:
 labelcount = 0
 
 symbols = dictstack()
-
+scope = 0 # file
 
 # TODO create another visitor that runs first and does constant folding etc.
-
-# A simple visitor for FuncDef nodes that prints the names and
-# locations of function definitions.
-
 
 class Visitor(c_ast.NodeVisitor):
     def generic_visit(self, node):
         print('unknown node', node.__class__.__name__, file=sys.stderr)
-        print(node, file=sys.stderr)
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
@@ -112,6 +118,7 @@ class Visitor(c_ast.NodeVisitor):
         return "\n".join(formatted)
 
     def visit_FileAST(self, node):
+        #print(node, file=sys.stderr)
         global symbols
         symbols = dictstack()
         print("\n        loadl    sp,#stack")
@@ -119,12 +126,13 @@ class Visitor(c_ast.NodeVisitor):
         print("\n; room for stack\n        stackdef")
 
     def visit_FuncDef(self, node):
+        scope = 1
         #print(node, file=sys.stderr)
         symbols[node.decl.name] = symbol('global',None,node)  # TODO include signature and deal with forward declarations
         symbols.dup()
         preamble = [
-            ';',
-            '%s:\t\t\t\t; %s' % (node.decl.name, node.decl.coord),
+            ';{ %s:%s'% (node.decl.name, node.decl.coord),
+            '%s:' % node.decl.name,
             '\tpush\tframe\t\t; old frame pointer',
             '\tmove\tframe,sp,0\t; new frame pointer',
             '\tmove\tr4,0,0\t\t; zero out index'
@@ -154,7 +162,8 @@ class Visitor(c_ast.NodeVisitor):
         postamble = [
             symbols["#return#"]+":",
             '\tpop\tframe\t\t; old framepointer',
-            '\treturn'
+            '\treturn',
+            ';}'
             ]
         extra_space = [
             '\tmover\tsp,sp,-%d\t; add space for auto variables'%symbols["#nauto#"], # TODO leave this out if there are zero auto variables
@@ -167,6 +176,7 @@ class Visitor(c_ast.NodeVisitor):
                 nregs += 1
         
         symbols.discard()
+        scope = 0
         return value(True, None, "\n".join(preamble + extra_space + movreg + body + postamble))
 
     def visit_ID(self, node):
@@ -339,31 +349,44 @@ class Visitor(c_ast.NodeVisitor):
         return value(rvalue, 4, "\n".join(result))
 
     def visit_Decl(self, node):
-        registers = symbols["#registers#"]
-        if len(registers):
-            symbols[node.name] = symbol('register', registers.pop(),node.type)
-        else:
-            nauto = symbols["#nauto#"]
-            symbols[node.name] = symbol('auto', - 1 - nauto, node.type) 
-            symbols["#nauto#"] = nauto + 1
         result = []
-        if node.init is not None:
-            s = self.visit(node.init)
-            result.append(s.code)
-        else:
-            result.append('\tmove\tr2,0,0\t\t; missing initializer, default to 0')
-        sym = symbols[node.name]
-        if sym.storage == 'register':
-            result.extend( [
-                "\tmove\t%s,r2,0\t\t; load %s (id node)"%(sym.location,node.name),
-            ])
-        elif sym.storage == 'auto':
-            result.extend( [
-                "\tmover\tr4,0,%d\t\t; load %s (id node)"%(sym.location,node.name),
-                "\tstorl\tr2,frame,r4"
-            ])
-        else:
-            print('Unexpected symbol storage %s with ID %s'%(sym.storage,node.name),file=sys.stderr)
+        if "#registers#" in symbols:  # function scope
+            registers = symbols["#registers#"]
+            if len(registers):
+                symbols[node.name] = symbol('register', registers.pop(),node.type)
+            else:
+                nauto = symbols["#nauto#"]
+                symbols[node.name] = symbol('auto', - 1 - nauto, node.type) 
+                symbols["#nauto#"] = nauto + 1
+            if node.init is not None:
+                s = self.visit(node.init)
+                result.append(s.code)
+            else:
+                result.append('\tmove\tr2,0,0\t\t; missing initializer, default to 0')
+            sym = symbols[node.name]
+            if sym.storage == 'register':
+                result.extend( [
+                    "\tmove\t%s,r2,0\t\t; load %s (id node)"%(sym.location,node.name),
+                ])
+            elif sym.storage == 'auto':
+                result.extend( [
+                    "\tmover\tr4,0,%d\t\t; load %s (id node)"%(sym.location,node.name),
+                    "\tstorl\tr2,frame,r4"
+                ])
+            else:
+                print('Unexpected symbol storage %s with ID %s'%(sym.storage,node.name),file=sys.stderr)
+        else:  # file scope
+            sym = symbol('global',None,node)
+            if not sym.nocode:
+                result.append(node.name + ':')
+            symbols[node.name] = sym
+            if node.init is not None:
+                s = self.visit(node.init)
+                result.append(s.code)
+            elif sym.nocode:
+                pass
+            else:
+                result.append('\tlong 0\t\t; missing initializer, default to 0')
         return value(True, sym.size, "\n".join(result))
 
     def visit_Assignment(self, node):
@@ -408,7 +431,13 @@ class Visitor(c_ast.NodeVisitor):
             result.append("\tloadl\tr2,#%s\t\t; char, but loaded as int"%node.value)
             size = 1
         else:
-            result.append("Constant of type %s ignored"%node.type)
+            if scope == 0:
+                if node.type == 'string':
+                    result.append('\tbyte0\t%s'%node.value)
+                else:
+                    result.append(";Constant of type %s ignored in file scope"%node.type)
+            else:
+                result.append(";Constant of type %s ignored in function scope"%node.type)
         return value(False, size, "\n".join(result))
         
     def visit_Return(self, node):  # TODO: should check that type matches return value of function
