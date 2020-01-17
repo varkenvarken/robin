@@ -60,7 +60,7 @@ class Opcode:
 	def __str__(self):
 		return self.name
 
-	def code(self, operand, address, labels):
+	def code(self, operand, address, labels, changed):
 		immediate = False
 		if operand == '':
 			values = None
@@ -88,11 +88,13 @@ class Opcode:
 			if values is not None: raise NotImplementedError("%s is implied and does not take an operand"%self.name)
 			return self.implied.to_bytes(2,'big')
 		elif self.relative is not None:
-			if(len(values)>1): raise ValueError("relative mode takes 1 value only") 
-			#print(values[0] - (address+2),values[0],(address+2), file=sys.stderr)
+			if(len(values)>1): raise ValueError("relative mode takes 1 value only")
+			#print(address, values, address in changed, file=sys.stderr)
 			try:
-				return self.relative.to_bytes(1,'big') + self.signedbytevalue(values[0] - (address+2)).to_bytes(1,'big', signed=True)  # checks if value fits 8 bit  -128 : 127
-			except:
+				if address in changed: raise ValueError()
+				rel = values[0] - (address+2)
+				return self.relative.to_bytes(1,'big') + self.signedbytevalue(rel).to_bytes(1,'big', signed=True)  # checks if value fits 8 bit  -128 : 127
+			except ValueError:
 				#print("long branch", file=sys.stderr)
 				return (self.relative * 256).to_bytes(2,'big') + (values[0] - (address+6)).to_bytes(4,'big', signed=True)
 		elif self.registers is not None:
@@ -178,7 +180,7 @@ class Opcode:
 			raise ValueError(v)
 		return v
 
-	def length(self, operand, labels, addr):
+	def length(self, operand, labels, addr, changed):
 		if self.data:
 			if operand.strip().startswith('"') or operand.strip().startswith('\''):
 				nvalues = len(bytes(eval(operand),encoding='UTF-8'))
@@ -205,15 +207,18 @@ class Opcode:
 							opl = 6
 					except:
 						opl = 6
-				elif len(values) > 1 and self.name in {'BRA','BRM','BRP','BEQ','BNE',}:
+				elif len(values) > 0 and self.name in {'BRA','BRM','BRP','BEQ','BNE',}:
+					if addr in changed: return 6
 					try:  # could also fail on a forward label reference in which case we assume an address ref and therefore a long
 						values = [eval(op,globals(),labels) for op in values]
-						values -= (addr + 2)
-						v = self.bytevalue_int(values[1])
+						values[0] -= (addr + 2)
+						v = self.bytevalue_int(values[0])
+						opl = 2 if v != 0 else 6
+					except NameError:  # cannot resolve forward ref, assume short branch
 						opl = 2
-					except:
+					except ValueError:  # not in range [-128,127]
 						opl = 6
-			#print(self.name, operand, opl, file=sys.stderr)
+					#print(self.name, values, addr + 2, opl, file=sys.stderr)
 			return opl
 
 opcode_list = [
@@ -289,7 +294,7 @@ def stripcomment(line):
 def assemble(lines, debug=False):
 	errors = 0
 	# pass1 determine label addresses
-	labels={  # predefined labels for register names/aliases
+	predefined={  # predefined labels for register names/aliases
 		'R0':0, 'R1':1, 'R2':2, 'TMP':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
 		'R9':9, 'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15,
 		'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
@@ -305,12 +310,18 @@ def assemble(lines, debug=False):
 		'alu_divu': 32, 'alu_divs': 33, 'alu_remu': 34, 'alu_rems': 35,
 	}
 
+	labels = dict(predefined)
+
 	# we basically repeat everything until nothing changes anymore
+	changed = {}
+	lenmap = {}
 	lastaddr0 = -1
 	lastaddr = 0
 	prepass = 0
 	processed_lines = []
 	while(lastaddr != lastaddr0):
+		print(prepass, lastaddr, lastaddr0, file=sys.stderr)
+		#print('0', prepass, {k:v for k,v in labels.items() if k.startswith('return')}, file=sys.stderr)
 		lastaddr0 = lastaddr
 		prepass += 1
 		addr=0
@@ -343,7 +354,7 @@ def assemble(lines, debug=False):
 					if op.endswith(':') or op.endswith('='):
 						constant = op.endswith('=')
 						label=op[:-1]
-						if label in labels: print('%s[%d]redefined label'%(filename,linenumber), file=sys.stderr)
+						if label in labels and prepass < 2: print('%s[%d]redefined label'%(filename,linenumber), file=sys.stderr)
 						if operand == '':
 							if constant: print('%s[%d]empty constant definition, default to addr'%(filename,linenumber), file=sys.stderr)
 							labels[label]=addr  # implicit label definition
@@ -379,7 +390,21 @@ def assemble(lines, debug=False):
 								continue
 							else:
 								#print(opcode,operand,addr,opcode.length(operand, labels),file=sys.stderr)
-								addr+=opcode.length(operand, labels, addr)  # this does also cover byte,byte0 and word,word0,long,long0 directives
+								codelen = opcode.length(operand, labels, addr, changed)
+								#print(line, file=sys.stderr)
+								#print('a', prepass, {k:v for k,v in labels.items() if k.startswith('return')}, file=sys.stderr)
+								#print('A', prepass, lenmap, file=sys.stderr)
+								if addr in lenmap and codelen != lenmap[addr]:
+									da = codelen - lenmap[addr]
+									changed[addr] = True
+									lenmap = {a+da:ll for a,ll in lenmap.items() if a > addr }
+									for l in labels:
+										if l not in predefined and labels[l] > addr:
+											labels[l] += da
+								lenmap[addr] = codelen
+								#print('b',prepass, {k:v for k,v in labels.items() if k.startswith('return')}, file=sys.stderr)
+								#print('B', prepass, lenmap, file=sys.stderr)
+								addr += codelen
 						except KeyError:
 							print("Error: %s[%d] unknown opcode %s"%(filename, linenumber, op), file=sys.stderr)
 							continue
@@ -427,7 +452,7 @@ def assemble(lines, debug=False):
 		else:
 			try:
 				pp=opcodes[op.upper()]
-				newcode=pp.code(operand, addr, labels)
+				newcode=pp.code(operand, addr, labels, changed)
 				code.extend(newcode)
 				if debug :
 					if pp.data:
