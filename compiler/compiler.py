@@ -1,6 +1,6 @@
 import sys
 from re import split
-
+from loguru import logger
 from pycparser import c_parser, c_ast, parse_file
 
 class dictstack:  # not yet complete, must be able to distinguish between redeclaration and shadowing
@@ -39,10 +39,10 @@ class symbol:
         self.nocode = False
         self.alloc = False
         self.allocbytes = 0
+        self.type = None
+        self.size = 0
 
         if stype is not None:
-            #print(stype, file=sys.stderr)
-        
             arrayalloc = None
             if type(stype) == c_ast.FuncDef:
                 stype = stype.decl.type.type
@@ -53,8 +53,7 @@ class symbol:
                     stype = stype.type
                     self.nocode = True
                 elif type(stype) == c_ast.ArrayDecl:
-                    if init is None:
-                        arrayalloc = stype.dim
+                    arrayalloc = stype.dim
                     stype = stype.type
 
             while type(stype) == c_ast.PtrDecl:
@@ -67,7 +66,7 @@ class symbol:
             if arrayalloc is not None:
                 ev = ExprVisitor()
                 self.alloc = True
-                self.allocbytes = ev.visit(arrayalloc) * self.size
+                self.allocbytes = ev.visit(arrayalloc)[0] * self.size
 
     def deref(self):
         ds = symbol(self.storage, self.location)
@@ -76,9 +75,9 @@ class symbol:
         ds.pointerdepth = self.pointerdepth - 1
         if ds.pointerdepth < 0 : raise ValueError('deref on non pointer')
         return ds
-        
+
     def __repr__(self):
-        return 'symbol(%s, %s, %s, %d, %d, %s)' %(self.storage, str(self.location), self.type, self.pointerdepth, self.size, self.nocode)
+        return 'symbol(%s, %s, %s, %d, %d, %s, %s, %d)' %(self.storage, str(self.location), self.type, self.pointerdepth, self.size, self.nocode,self.alloc,self.allocbytes)
 
 class value:
     def __init__(self, rvalue, size, code, symbol=None):
@@ -95,6 +94,10 @@ class value:
     def ispointer(self):
         return self.pointerdepth > 0
 
+    def rsize(self):
+        if self.pointerdepth : return 4
+        return self.size
+        
     def __repr__(self):
         return 'value(%s, %s, %s, %d, %r)' %(self.rvalue, self.size, self.vtype, self.pointerdepth, self.symbol)
 
@@ -109,17 +112,23 @@ class ExprVisitor(c_ast.NodeVisitor):
     """class to evaluate compile time expressions"""
 
     def generic_visit(self, node):
-        print('unknown node', node.__class__.__name__, file=sys.stderr)
-        return None
+        logger.debug('ExprVisitor unknown node {}', node)
+        return []
 
+    def visit_InitList(self, node):
+        values = []
+        for e in node.exprs:
+            values.extend(self.visit(e))
+        return values
+        
     def visit_Constant(self, node):
-        return int(node.value)   # TODO make this smarter
+        return [int(node.value)]   # TODO make this smarter
         
 class Visitor(c_ast.NodeVisitor):
     """class to generate code"""
 
     def generic_visit(self, node):
-        print('unknown node', node.__class__.__name__, node, file=sys.stderr)
+        print('Visitor unknown node', node.__class__.__name__, node, file=sys.stderr)
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
@@ -143,7 +152,6 @@ class Visitor(c_ast.NodeVisitor):
         return "\n".join(formatted)
 
     def visit_FileAST(self, node):
-        #print(node, file=sys.stderr)
         global symbols
         symbols = dictstack()
         print("\n        loadl    sp,#stack")
@@ -184,15 +192,34 @@ class Visitor(c_ast.NodeVisitor):
         symbols["#return#"] = return_label
         body = [self.visit(node.body).code]  # only interested in de code
         # TODO some optimization can be done here because the last line from the body might be 'bra returnlabel'
-        postamble = [
-            symbols["#return#"]+":",
+        nvars = symbols["#nauto#"]
+
+        postamble = [symbols["#return#"]+":"]
+        if nvars > 7:
+            offset = nvars * 4;
+            if offset > 127:
+                postamble.append('\tloadl\tr2,#%d\t; remove space for %d auto variables'%(offset,nvars))
+            else:
+                postamble.append('\tload\tr2,#%d\t; remove space for %d auto variables'%(offset,nvars))
+            postamble.append('\tmove\tsp,sp,r2\t; remove space for %d auto variables'%(nvars))
+        elif nvars > 0:
+            postamble.append('\tmover\tsp,sp,%d\t; remove space for %d auto variables'%(nvars, nvars))
+        postamble.extend([
             '\tpop\tframe\t\t; old framepointer',
             '\treturn',
             ';}'
-            ]
-        extra_space = [
-            '\tmover\tsp,sp,-%d\t; add space for auto variables'%symbols["#nauto#"], # TODO leave this out if there are zero auto variables
-        ]
+            ])
+
+        extra_space = []
+        if nvars > 8:
+            offset = nvars * -4;
+            if offset > -128:
+                extra_space.append('\tloadl\tr2,#%d\t; add space for %d auto variables'%(offset,nvars))
+            else:
+                extra_space.append('\tload\tr2,#%d\t; add space for %d auto variables'%(offset,nvars))
+            extra_space.append('\tmove\tsp,sp,r2\t; add space for %d auto variables'%(nvars))
+        elif nvars > 0:
+            extra_space.append('\tmover\tsp,sp,-%d\t; add space for %d auto variables'%(nvars, nvars))
         nregs = 0
         for r in ['r5','r6','r7','r8','r9','r10']:
             if r not in symbols["#registers#"]:
@@ -209,11 +236,11 @@ class Visitor(c_ast.NodeVisitor):
             symbol = symbols[node.name]
             if symbol.storage == 'register':
                 result = [
-                    "\tmove\tr2,%s,0\t\t; load %s"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
+                    self.r4index(symbol.location,node.name),
                 ]
             elif symbol.storage == 'auto':
                 result = [
-                    "\tmover\tr4,0,%d\t\t; load %s"%(symbol.location,node.name),  # TODO this only works for a small number of variables as index = [-8,7]
+                    self.r4index(symbol.location,node.name),
                     "\tloadl\tr2,frame,r4"
                 ]
             elif symbol.storage == 'global':
@@ -362,10 +389,7 @@ class Visitor(c_ast.NodeVisitor):
         if s.size == 4:
             result.extend(['\tmove\tr2,r2,r2\t\t; multiply by 2','\tmove\tr2,r2,r2\t\t; multiply by 2'])
         result.append('\tpop\tr3')
-        if s.size == 4:
-            result.append('\tloadl\tr2,r2,r3')
-        else:
-            result.append('\tload\tr2,r2,r3')
+        result.append('\tmove\tr2,r2,r3\t\t; add index to base address')
         isrvalue = s.rvalue
         symbol = s.symbol
         return value(isrvalue, s.size, "\n".join(result), symbol)
@@ -388,42 +412,71 @@ class Visitor(c_ast.NodeVisitor):
         rvalue = True  # should depend on return type of function
         return value(rvalue, 4, "\n".join(result))
 
+    def r4index(self,location,name):
+        if location >= -8:
+            return "\tmover\tr4,0,%d\t\t; load %s (id node)"%(location,name)
+        else:
+            offset = location * 4
+            if offset >= -128:
+                return "\tload\tr4,#%d\t\t; load %s (id node)"%(offset,name)
+            else:
+                return "\tloadl\tr4,#%d\t\t; load %s (id node)"%(offset,name)
+            
     def visit_Decl(self, node):
-        #print(node,file=sys.stderr)
+        ev = ExprVisitor()
         result = []
         if "#registers#" in symbols:  # function scope
             registers = symbols["#registers#"]
-            if len(registers):
+            if type(node.type) == c_ast.ArrayDecl:
+                d = ev.visit(node.type.dim)[0]
+                nauto = symbols["#nauto#"]
+                symbols[node.name] = symbol('auto', - d - nauto, node) 
+                symbols["#nauto#"] = nauto + d
+                if node.init:
+                    s = ev.visit(node.init)
+                    for n,v in enumerate(s, start=-d -nauto):
+                        result.append('\tloadl\tr2,#%d'%v)
+                        result.append('\tloadl\tr3,#%d'%(n * 4))
+                        result.append('\tstorl\tr2,frame,r3')
+                        
+            elif len(registers):
                 symbols[node.name] = symbol('register', registers.pop(),node.type)
             else:
                 nauto = symbols["#nauto#"]
                 symbols[node.name] = symbol('auto', - 1 - nauto, node.type) 
                 symbols["#nauto#"] = nauto + 1
-            if node.init is not None:
-                s = self.visit(node.init)
-                result.append(s.code)
-            else:
-                result.append('\tmove\tr2,0,0\t\t; missing initializer, default to 0')
             sym = symbols[node.name]
-            if sym.storage == 'register':
-                result.extend( [
-                    "\tmove\t%s,r2,0\t\t; load %s (id node)"%(sym.location,node.name),
-                ])
-            elif sym.storage == 'auto':
-                result.extend( [
-                    "\tmover\tr4,0,%d\t\t; load %s (id node)"%(sym.location,node.name),
-                    "\tstorl\tr2,frame,r4"
-                ])
-            else:
-                print('Unexpected symbol storage %s with ID %s'%(sym.storage,node.name),file=sys.stderr)
+            if not sym.nocode and not sym.alloc:
+                if node.init is not None:
+                    logger.debug(sym)
+                    logger.debug(node.init)
+                    s = self.visit(node.init)
+                    result.append(s.code)
+                else:
+                    result.append('\tmove\tr2,0,0\t\t; missing initializer, default to 0')
+                if sym.storage == 'register':
+                    result.extend( [
+                        "\tmove\t%s,r2,0\t\t; load %s (id node)"%(sym.location,node.name),
+                    ])
+                elif sym.storage == 'auto':
+                    result.extend( [
+                        self.r4index(sym.location,node.name),
+                        "\tstorl\tr2,frame,r4"
+                    ])
+                else:
+                    print('Unexpected symbol storage %s with ID %s'%(sym.storage,node.name),file=sys.stderr)
         else:  # file scope
             sym = symbol('global',None,node)
             if not sym.nocode:
                 result.append(node.name + ':')
             symbols[node.name] = sym
             if node.init is not None:
-                s = self.visit(node.init)
-                result.append(s.code)
+                s = ev.visit(node.init)
+                for v in s:
+                    if type(v) == int:
+                        result.append("\tlong\t%d"%v)
+                    else:
+                        raise ValueError("initializer not an int")
             elif sym.nocode:
                 pass
             elif sym.alloc:
@@ -436,7 +489,6 @@ class Visitor(c_ast.NodeVisitor):
         return value(True, sym.size, "\n".join(result))
 
     def visit_Assignment(self, node):
-        #print(node, file=sys.stderr)
         result = []
         if node.op == '=':
             sr = self.visit(node.rvalue)
@@ -455,7 +507,18 @@ class Visitor(c_ast.NodeVisitor):
                         result.append("\tstorl\tr3,r2,0\t; assign long")
                     else:
                         result.append("\tstor\tr3,r2,0\t; assign byte")
-                else:
+                elif sym.alloc or sym.storage == 'global':
+                    if sr.symbol is not None:
+                        if sym.size == 4:
+                            result.append('\tloadl\tr3,r3,0')
+                        else:
+                            result.append('\tload\tr3,r3,0')
+                    # r2 is lvalue r3 is rvalue
+                    if sym.size == 4:
+                        result.append('\tstorl\tr3,r2,0')
+                    else:
+                        result.append('\tstor\tr3,r2,0')
+                else:  # auto
                     result.append("\tload\tr4,#%d"%sym.location)
                     if sym.size == 4:
                         result.append("\tstorl\tr2,frame,r4\t; assign long")
@@ -488,7 +551,13 @@ class Visitor(c_ast.NodeVisitor):
         
     def visit_Return(self, node):  # TODO: should check that type matches return value of function
         result = []
-        result.append(self.visit(node.expr).code)
+        s = self.visit(node.expr)
+        result.append(s.code)
+        if s.symbol is not None and s.symbol.storage == 'global':
+            if s.rsize() == 1:
+                result.append('\tloadb\tr2,r2,0\t\t; r2 should be cleared first, not yet implemented')
+            else:
+                result.append('\tload\tr2,r2,0')
         result.append("\tbra\t"+ symbols["#return#"])
         return value(False,0,"\n".join(result))
 
@@ -540,6 +609,7 @@ class Visitor(c_ast.NodeVisitor):
     def visit_EmptyStatement(self, node):
         return value(True,0,"\t;empty statement")
 
+@logger.catch
 def process(filename):
     # Note that cpp is used. Provide a path to your own cpp or
     # make sure one exists in PATH.
@@ -554,5 +624,8 @@ def process(filename):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         filename  = sys.argv[1]
+
+    logger.remove()
+    logger.add(sys.stderr, colorize=False, level='DEBUG', backtrace=False)
 
     process(filename)
