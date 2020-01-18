@@ -138,7 +138,6 @@
 	wire [3:0] R2  = instruction[11: 8]; // destination register
 	wire [3:0] R1  = instruction[ 7: 4]; // source register 1
 	wire [3:0] R0  = instruction[ 3: 0]; // source register 0
-	wire writable_destination = R2 > 1;	 // r0 and r1 are fixed at 0 and 1 respectively
 	wire [7:0] immediate = instruction[7:0];
 	wire [31:0] r1_offset = r[R1] + {{26{R0[3]}},R0,2'b00};  // sign extended offset * 4
 
@@ -169,10 +168,6 @@
 	always @(posedge clk) begin
 		mem_write <= 0;
 		if(reset) begin
-			r[0] <= 0;
-			r[1] <= 1;
-			//r[2] <= 0;
-			//r[13] <= 32'h8000_0000; // flags register, bit 31 is always on, bit 30 is negative, bit 29 is zero, bit 28 is carry, bits [7;0] is aluop
 			r[15] <= start_address;
 			halted <= 0;
 			state <= FETCH;
@@ -184,6 +179,8 @@
 		end else
 			case(state)
 				FETCH	:	begin
+								r[0] <= 0;
+								r[1] <= 1;
 								r[13][31] <= 1; // force the always on bit
 								mem_raddr <= ip;
 								state <= FETCH1w;
@@ -216,17 +213,17 @@
 								div_go <= 0;
 								case(cmd)
 									CMD_MOVEP:	begin
-													if(writable_destination) r[R2] <= sumr1r0;
+													r[R2] <= sumr1r0;
 												end
 									CMD_ALU:	begin
 													if(~alu_op[5]) begin // regular alu operation (single cycle)
-														if(writable_destination) r[R2] <= alu_c;
+														r[R2] <= alu_c;
 														r[13][28] <= alu_carry_out;
 														r[13][29] <= alu_is_zero;
 														r[13][30] <= alu_is_negative;
 													end else begin // divider operation (multiple cycles)
 														if(div_is_available) begin
-															if(writable_destination) r[R2] <= div_c;
+															r[R2] <= div_c;
 															r[13][29] <= div_is_zero;
 															r[13][30] <= div_is_negative;
 														end else
@@ -234,7 +231,7 @@
 													end
 												end
 									CMD_MOVER:	begin
-													if(writable_destination) r[R2] <= r1_offset;
+													r[R2] <= r1_offset;
 												end
 									CMD_LOADB:	begin
 													mem_raddr <= sumr1r0_addr;
@@ -269,7 +266,7 @@
 													state <= WRITEWAITL;
 												end
 									CMD_LOADI:	begin
-													if(writable_destination) r[R2][7:0] <= immediate;
+													r[R2][7:0] <= immediate;
 												end
 									CMD_BRANCH:	begin
 													if(longbranch) begin
@@ -283,13 +280,13 @@
 													end
 												end
 									CMD_JUMP:	begin
-													if(writable_destination) r[R2] <= r[15];
+													r[R2] <= r[15];
 													r[15] <= sumr1r0;
 												end
 									CMD_SPECIAL:begin
 													state <= FETCH;
 													case(immediate)
-														8'd0:	if(writable_destination) r[R2] <= {16'b0, counter};
+														8'd0:	r[R2] <= {16'b0, counter};
 														8'd1:	begin
 																	mem_raddr <= r[14];
 																	state <= LOADLw;
@@ -309,7 +306,7 @@
 				LOADL1	:	begin
 								if(longbranch)
 									temp[31:24] <= mem_data_out;
-								else if(writable_destination)
+								else
 									r[R2][31:24] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOADLw2;
@@ -319,7 +316,7 @@
 				LOADL2	:	begin
 								if(longbranch)
 									temp[23:16] <= mem_data_out;
-								else if(writable_destination)
+								else
 									r[R2][23:16] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOADWw;
@@ -328,7 +325,7 @@
 				LOADW1	:	begin
 								if(longbranch)
 									temp[15:8] <= mem_data_out;
-								else if(writable_destination)
+								else
 									r[R2][15:8] <= mem_data_out;
 								mem_raddr <= mem_raddr + 1;
 								state <= LOAD1w;
@@ -339,7 +336,7 @@
 								if(longbranch) begin
 									temp[7:0] <= mem_data_out;
 									state <= WAIT;
-								end else if(writable_destination)
+								end else
 									r[R2][7:0] <= mem_data_out;
 							end
 				WAIT4:		begin
