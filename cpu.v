@@ -165,11 +165,13 @@
 	localparam CMD_JUMP    = 14;
 	localparam CMD_SPECIAL = 15; // note that halt (= 0xffff) is dealt with in a different manner
 
-	localparam SPECIAL_MARK	=  0;
-	localparam SPECIAL_POP	=  1;
-	localparam SPECIAL_PUSH	=  2;
-	localparam SPECIAL_SETEQ=  8;
-	localparam SPECIAL_SETNE=  9;
+	localparam SPECIAL_MARK		=  0;
+	localparam SPECIAL_POP		=  1;
+	localparam SPECIAL_PUSH		=  2;
+	localparam SPECIAL_SETEQ	=  8;
+	localparam SPECIAL_SETNE	=  9;
+	localparam SPECIAL_SETMIN	=  12;
+	localparam SPECIAL_SETPOS	=  13;
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -304,6 +306,8 @@
 																		end
 														SPECIAL_SETEQ:	r[R2] <= {31'b0,  r[13][29]};
 														SPECIAL_SETNE:	r[R2] <= {31'b0, ~r[13][29]};
+														SPECIAL_SETMIN:	r[R2] <= {31'b0,  r[13][30]};
+														SPECIAL_SETPOS:	r[R2] <= {31'b0, ~r[13][30]};
 														default: state <= FETCH;
 													endcase
 												end
