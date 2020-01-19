@@ -1,3 +1,4 @@
+# location /usr/share/geany/filedefs/filetypes.asm
 # For complete documentation of this file, please see Geany's main documentation
 [styling]
 # Edit these in the colorscheme .conf file instead
@@ -21,9 +22,9 @@ extintructions=keyword_4
 [keywords]
 # all items must be in one line
 # this is by default a very simple instruction set
-instructions=load loadw loadl stor storw storl move mover alu jal bra brm brp beq bne mark halt pop push
+instructions=load loadw loadl stor storw storl move mover alu jal bra brm brp beq bne mark halt pop push seteq setne setmin setpos
 registers=r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r14 pc sp link frame
-directives=byte byte0 word word0 long long0 return call
+directives=byte byte0 word word0 long long0 return call test jump  dub mullo mulhi mul16 divs divu rems remu and cmp shiftright shiftleft stackdef
 
 [settings]
 # default extension used when saving files
