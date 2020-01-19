@@ -112,7 +112,7 @@ class ExprVisitor(c_ast.NodeVisitor):
     """class to evaluate compile time expressions"""
 
     def generic_visit(self, node):
-        logger.debug('ExprVisitor unknown node {}', node)
+        logger.error('ExprVisitor unknown node {}', node)
         return []
 
     def visit_InitList(self, node):
@@ -137,7 +137,7 @@ class Visitor(c_ast.NodeVisitor):
     """class to generate code"""
 
     def generic_visit(self, node):
-        logger.debug('Visitor unknown node', node)
+        logger.error('Visitor unknown node', node)
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
@@ -336,34 +336,87 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_UnaryOp(self, node):
         s = self.visit(node.expr)
-        #print('unop',node.op,s, file=sys.stderr)
         result = [s.code]
         isrvalue = s.rvalue
         symbol = s.symbol
-        #print(node,s,file=sys.stderr)
-        if node.op == 'p++':
+        if node.op in {'p++', 'p--'}:
             if isrvalue:
-                raise ValueError('postinc op on rvalue')
+                raise ValueError('postinc/postdec op on rvalue')
             # pointers themselves are 4 bytes so a pointer depth of 1 actualy points to something with a possible different size
             size = s.size if s.pointerdepth == 1 else (4 if s.pointerdepth > 1 else 1)
             if size == 1:
                 if symbol.storage == 'register':
                     reg = symbol.location
-                    result.extend([
-                        '\tmove\t%s,%s,1\t\t; postinc ptr to byte or value'%(reg,reg),
-                    ])
+                    if node.op == 'p++':
+                        result.extend([
+                            '\tmove\t%s,%s,1\t\t; postinc ptr to byte or value'%(reg,reg),
+                        ])
+                    else:
+                        result.extend([
+                            '\tload\tr13,#alu_sub\t\t; postdec ptr to byte or value',
+                            '\talu\t%s,%s,1\t\t; postdec ptr to byte or value'%(reg,reg),
+                        ])
                 else:
-                    print('postinc for storage other than register not implemented', file=sys.stderr)
+                    logger.error('postinc/postdec for storage other than register not implemented')
             elif size == 4:
                 if symbol.storage == 'register':
                     reg = symbol.location
-                    result.extend([
-                        '\tmover\t%s,%s,1\t\t; postinc ptr to 4byte'%(reg,reg),
-                    ])
+                    if node.op == 'p++':
+                        result.extend([
+                            '\tmover\t%s,%s,1\t\t; postinc ptr to 4byte value'%(reg,reg),
+                        ])
+                    else:
+                        result.extend([
+                            '\tload\tr13,#alu_sub\t\t; postdec ptr to 4byte value',
+                            '\tload\tr3,#4\t\t; postdec ptr to 4byte value',
+                            '\talu\t%s,%s,r3\t\t; postdec ptr to 4byte value'%(reg,reg),
+                        ])
                 else:
-                    print('postinc for storage other than register not implemented', file=sys.stderr)
+                    logger.error('postinc/postdec for storage other than register not implemented')
             else:
-                print('postinc for size != 1 or 4 not implemented', file=sys.stderr)
+                logger.error('postinc/postdec for size != 1 or 4 not implemented')
+            # postinc does not change the lvalue status or the pointer depth!
+        elif node.op in {'++', '--'}:
+            if isrvalue:
+                raise ValueError('preinc op on rvalue')
+            # pointers themselves are 4 bytes so a pointer depth of 1 actualy points to something with a possible different size
+            size = s.size if s.pointerdepth == 1 else (4 if s.pointerdepth > 1 else 1)
+            if size == 1:
+                if symbol.storage == 'register':
+                    reg = symbol.location
+                    if node.op == '++':
+                        result.extend([
+                            '\tmove\tr2,r2,1\t\t; preinc value or pointer to size 1',
+                            '\tmove\t%s,r2,0\t\t; preinc value or pointer to size 1'%reg,
+                        ])
+                    else:
+                        result.extend([
+                            '\tload\tr13,#alu_sub\t\t; predec value or pointer to size 1',
+                            '\tload\tr3,#1\t\t; predec value or pointer to size 1',
+                            '\talu\tr2,r2,r3\t\t; predec value or pointer to size 1',
+                            '\tmove\t%s,r2,0\t\t; predec value or pointer to size 1'%reg,
+                        ])
+                else:
+                    logger.error('preinc for storage other than register not implemented')
+            elif size == 4:
+                if symbol.storage == 'register':
+                    reg = symbol.location
+                    if node.op == '++':
+                        result.extend([
+                            '\tmover\tr2,r2,1\t\t; preinc pointer to size 4',
+                            '\tmover\t%s,r2,0\t\t; preinc pointer to size 4'%reg,
+                        ])
+                    else:
+                        result.extend([
+                            '\tload\tr13,#alu_sub\t\t; predec pointer to size 4',
+                            '\tload\tr3,#4\t\t; predec pointer to size 4',
+                            '\talu\tr2,r2,r3\t\t; predec pointer to size 4',
+                            '\tmove\t%s,r2,0\t\t; predec pointer to size 4'%reg,
+                        ])
+                else:
+                    logger.error('preinc for storage other than register not implemented')
+            else:
+                logger.error('preinc for size != 1 or 4 not implemented')
             # postinc does not change the lvalue status or the pointer depth!
         elif node.op == '*':
             if isrvalue:
@@ -377,11 +430,25 @@ class Visitor(c_ast.NodeVisitor):
                         '\tmove\tr2,r3,0'
                     ])
                 else:
-                    print('postinc for storage other than register not implemented', file=sys.stderr)
+                    logger.error('deref for storage other than register not implemented')
             else:
-                print('postinc for size != 1 not implemented', file=sys.stderr)
+                logger('deref for size != 1 not implemented')
             symbol = symbol.deref()
             isrvalue = s.pointerdepth < 1
+        elif node.op in {'-', '~', '!' }:
+            if s.pointerdepth > 0:
+                logger.error('unary operator {} not allowed on pointers',node.op)
+            else:
+                unop_code = {
+                    '-': ['\tload\tr13,#alu_sub\t\t; unary -','\talu\tr2,0,r2'],
+                    '~': ['\tload\tr13,#alu_not\t\t; unary ~','\talu\tr2,r2,0'],
+                    '!': ['\tsetne\tr2\t\t; unary !'],
+                }
+                result.extend(unop_code[node.op])
+        elif node.op == '+':
+            pass  # unary plus ignored
+        else:
+            logger.error('unary operator {} ignored',node.op)
         return value(isrvalue, s.size, "\n".join(result), symbol)
 
     def visit_ArrayRef(self, node):
@@ -476,14 +543,12 @@ class Visitor(c_ast.NodeVisitor):
                     if type(v) == int:
                         result.append("\tlong\t%d"%v)
                     elif type(v) == str:
-                        result.append('\tbyte0\t"%s"'%v)
+                        result.append('\tbyte0\t%s'%v)
                     else:
                         raise ValueError("initializer not an int")
             elif sym.nocode:
                 pass
             elif sym.alloc:
-                #logger.debug(node)
-                #logger.debug(sym)
                 if sym.size == 4:
                     result.append('\tlong\t%s'%(",".join(['0']*(sym.allocbytes//4))))
                 else:
@@ -507,7 +572,6 @@ class Visitor(c_ast.NodeVisitor):
             sym = sl.symbol
             if not sl.rvalue:
                 if sym.storage == 'register':
-                    logger.debug(sl)
                     if sl.size == 4:
                         result.append("\tstorl\tr3,r2,0\t; assign long")
                     else:
