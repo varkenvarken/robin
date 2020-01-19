@@ -252,6 +252,10 @@ opcode_list = [
 	 registers=0xe0),
   Opcode(name='MARK', desc='R2 <- counter',
 	 register=0xf0, cmd=0),
+  Opcode(name='SETEQ', desc='R2 <- zeroflag ? 1 : 0',
+	 register=0xf0, cmd=8),
+  Opcode(name='SETNE', desc='R2 <- zeroflag ? 0 : 1',
+	 register=0xf0, cmd=9),
   Opcode(name='PUSH', desc='SP <- SP -4; (SP) <- R2',
 	 register=0xf0, cmd=2),
   Opcode(name='POP', desc='R2 <- (SP); SP <- SP + 4',
@@ -319,7 +323,7 @@ def assemble(lines, debug=False):
 	lastaddr = 0
 	prepass = 0
 	processed_lines = []
-	while(lastaddr != lastaddr0):
+	while(lastaddr != lastaddr0): # this is NOT foolproof is someting follows the code!
 		print(prepass, lastaddr, lastaddr0, file=sys.stderr)
 		#print('0', prepass, {k:v for k,v in labels.items() if k.startswith('return')}, file=sys.stderr)
 		lastaddr0 = lastaddr
