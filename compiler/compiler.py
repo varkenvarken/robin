@@ -66,7 +66,7 @@ class symbol:
             if arrayalloc is not None:
                 ev = ExprVisitor()
                 self.alloc = True
-                self.allocbytes = ev.visit(arrayalloc)[0] * self.size
+                self.allocbytes = int(ev.visit(arrayalloc)[0]) * self.size
 
     def deref(self):
         ds = symbol(self.storage, self.location)
@@ -122,13 +122,22 @@ class ExprVisitor(c_ast.NodeVisitor):
         return values
         
     def visit_Constant(self, node):
-        return [int(node.value)]   # TODO make this smarter
+        result = []
+        if node.type == 'int':
+            result.append(int(node.value))
+        elif node.type == 'char':
+            result.append(int(node.value))
+        else:
+            if scope == 0:
+                if node.type == 'string':
+                    result.append(node.value)
+        return result   # TODO make this smarter
         
 class Visitor(c_ast.NodeVisitor):
     """class to generate code"""
 
     def generic_visit(self, node):
-        print('Visitor unknown node', node.__class__.__name__, node, file=sys.stderr)
+        logger.debug('Visitor unknown node', node)
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
@@ -236,7 +245,7 @@ class Visitor(c_ast.NodeVisitor):
             symbol = symbols[node.name]
             if symbol.storage == 'register':
                 result = [
-                    self.r4index(symbol.location,node.name),
+                    '\tmove\tr2,%s,0\t\t; load %s'%(symbol.location,node.name),
                 ]
             elif symbol.storage == 'auto':
                 result = [
@@ -255,17 +264,7 @@ class Visitor(c_ast.NodeVisitor):
             return value(False, 0, "")
 
     def isnotzero(self, reg):  # prime candidate for creating a cpu intruction for
-        notzero = self.label('notzero')
-        end = self.label('zero_end')
-        return [
-            '\ttest\t%s\t\t; notzero?'%reg,
-            '\tbne\t%s'%notzero,
-            '\tmove\t%s,0,0'%reg,
-            '\tbra\t%s'%end,
-            notzero+':',
-            '\tmove\t%s,0,1'%reg,
-            end+':'
-        ]
+        return ['\tsetne\t%s\t\t; notzero?'%reg]
 
     def visit_BinaryOp(self, node):
         alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mul', '/': 'alu_divs',
@@ -277,40 +276,43 @@ class Visitor(c_ast.NodeVisitor):
         post = self.label('post')
         post2 = self.label('post')
         post_map = {
-            '==' : ['\tbeq\t%s\t\t; equal'%post,'\tmove\tr2,0,0','\tbra\t%s'%post2,post+':','\tmove\tr2,0,1',post2+':'],
-            '<'  : ['\tbrp\t%s\t\t; less than (reversed operands)'%post,'\tmove\tr2,0,0',post+':'],
-            '>'  : ['\tbrp\t%s\t\t; greater than'%post,'\tmove\tr2,0,0',post+':'],
+            '==' : ['\tseteq\tr2\t\t; =='],
+            '!=' : ['\tsetne\tr2\t\t; !='],
+            '<'  : ['\tsetmin\tr2\t\t; <'],
+            '>'  : ['\tsetmin\tr2\t\t; > (reversed operands)'],
+            '<='  : ['\tsetpos\tr2\t\t; <= (reversed operands)'],
+            '>='  : ['\tsetpos\tr2\t\t; >='],
         }
-        reversed_operands = { '<' }
+        reversed_operands = { '>', '<=' }
 
         if node.op in alu_opmap:
             sl = self.visit(node.left)
             sr = self.visit(node.right)
             if sl.ispointer() and sr.ispointer() and node.op not in {'-', '<', '>', '>=', '<=', '==', '!=' }:
-                print("unsupported op %s for two pointers ignored"%node.op,file=sys.stderr)
+                logger.error("unsupported op {} for two pointers ignored", node.op)
                 return value(False, 0, "")
             elif sl.ispointer() and node.op not in {'+', '-', '==', '!=' }:
-                print("unsupported op %s for pointer,value ignored"%node.op,file=sys.stderr)
+                logger.error("unsupported op {} for pointer,value ignored", node.op)
                 return value(False, 0, "")
             elif sr.ispointer() and node.op not in {'+', '==', '!=' }:
-                print("unsupported op %s for value,pointer ignored"%node.op,file=sys.stderr)
+                logger("unsupported op {} for value,pointer ignored", node.op)
                 return value(False, 0, "")
 
             endlabel = self.label('binop_end')
             # note that results never need to be widened because internally we always work with 32 bit
             result = [sl.code]
             if node.op == '&&':
-                result.extend(self.isnotzero('r2'))
-                result.append('\ttest r2\t\t; && short circuit')
+                result.append('\ttest\tr2\t\t; && short circuit if left side is false')
+                result.append('\tsetne\tr2\t\t; also normalize value to be used in bitwise and')
                 result.append('\tbeq\t%s'%endlabel)
             if node.op == '||':
-                result.extend(self.isnotzero('r2'))
-                result.append('\ttest r2\t\t; || short circuit')
+                result.append('\ttest\tr2\t\t; || short circuit if left side is true')
+                result.append('\tsetne\tr2\t\t; also normalize value to be used in bitwise or')
                 result.append('\tbne\t%s'%endlabel)
             result.append("\tpush\tr2\t\t; binop(%s)"%node.op)
             result.append(sr.code)
             if node.op in {'&&', '||'}:
-                result.extend(self.isnotzero('r2'))
+                result.append('\tsetne\tr2\t\t; normalize value to be used in bitwise or/and')
             result.append("\tpop\tr3\t\t; binop(%s)"%node.op)
             # actual alu op
             result.append("\tload\tflags,#%s\t; binop(%s)"%(alu_opmap[node.op], node.op))
@@ -329,7 +331,7 @@ class Visitor(c_ast.NodeVisitor):
             if sl.ispointer() and not sr.ispointer(): rvalue = False
             return value(rvalue, 4, "\n".join(result))
         else:
-            print("Binary op %s ignored"%node.op,file=sys.stderr)
+            logger.error("Binary op {} ignored",node.op)
             return value(False, 0, "")
 
     def visit_UnaryOp(self, node):
@@ -448,8 +450,6 @@ class Visitor(c_ast.NodeVisitor):
             sym = symbols[node.name]
             if not sym.nocode and not sym.alloc:
                 if node.init is not None:
-                    logger.debug(sym)
-                    logger.debug(node.init)
                     s = self.visit(node.init)
                     result.append(s.code)
                 else:
@@ -475,11 +475,15 @@ class Visitor(c_ast.NodeVisitor):
                 for v in s:
                     if type(v) == int:
                         result.append("\tlong\t%d"%v)
+                    elif type(v) == str:
+                        result.append('\tbyte0\t"%s"'%v)
                     else:
                         raise ValueError("initializer not an int")
             elif sym.nocode:
                 pass
             elif sym.alloc:
+                #logger.debug(node)
+                #logger.debug(sym)
                 if sym.size == 4:
                     result.append('\tlong\t%s'%(",".join(['0']*(sym.allocbytes//4))))
                 else:
@@ -503,6 +507,7 @@ class Visitor(c_ast.NodeVisitor):
             sym = sl.symbol
             if not sl.rvalue:
                 if sym.storage == 'register':
+                    logger.debug(sl)
                     if sl.size == 4:
                         result.append("\tstorl\tr3,r2,0\t; assign long")
                     else:
@@ -595,6 +600,16 @@ class Visitor(c_ast.NodeVisitor):
         result.append(self.visit(node.stmt).code)
         result.append("\tbra\t" + while_label)
         result.append(endwhile_label+":")
+        return value(False, 0, "\n".join(result))
+
+    def visit_DoWhile(self, node):
+        result = []
+        dowhile_label = self.label("dowhile")
+        result.append(dowhile_label+":")
+        result.append(self.visit(node.stmt).code)
+        result.append(self.visit(node.cond).code)
+        result.append("\ttest\tr2")
+        result.append("\tbne\t" + dowhile_label)
         return value(False, 0, "\n".join(result))
 
     def visit_Compound(self, node):
