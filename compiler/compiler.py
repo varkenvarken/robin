@@ -137,7 +137,7 @@ class Visitor(c_ast.NodeVisitor):
     """class to generate code"""
 
     def generic_visit(self, node):
-        logger.error('Visitor unknown node', node)
+        logger.error('Visitor unknown node {}', node)
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
@@ -656,25 +656,41 @@ class Visitor(c_ast.NodeVisitor):
     def visit_While(self, node):
         result = []
         while_label = self.label("while")
+        endwhile_label = self.label("endwhile")
+        self.continue_target = while_label
+        self.break_target = endwhile_label
         result.append(while_label+":")
         result.append(self.visit(node.cond).code)
         result.append("\ttest\tr2")
-        endwhile_label = self.label("endwhile")
         result.append("\tbeq\t" + endwhile_label)
         result.append(self.visit(node.stmt).code)
         result.append("\tbra\t" + while_label)
         result.append(endwhile_label+":")
+        self.continue_target = None
+        self.break_target = None
         return value(False, 0, "\n".join(result))
 
     def visit_DoWhile(self, node):
         result = []
         dowhile_label = self.label("dowhile")
+        enddowhile_label = self.label("enddowhile")
+        self.continue_target = dowhile_label
+        self.break_target = enddowhile_label
         result.append(dowhile_label+":")
         result.append(self.visit(node.stmt).code)
         result.append(self.visit(node.cond).code)
         result.append("\ttest\tr2")
         result.append("\tbne\t" + dowhile_label)
+        result.append(enddowhile_label+":")
+        self.continue_target = None
+        self.break_target = None
         return value(False, 0, "\n".join(result))
+
+    def visit_Continue(self, node):
+        return value(False, 0, "\tbra\t%s\t\t; continue"%self.continue_target)
+
+    def visit_Break(self, node):
+        return value(False, 0, "\tbra\t%s\t\t; break"%self.break_target)
 
     def visit_Compound(self, node):
         result = []
