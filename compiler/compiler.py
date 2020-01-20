@@ -578,10 +578,7 @@ class Visitor(c_ast.NodeVisitor):
             sym = sl.symbol
             if not sl.rvalue:
                 if sym.storage == 'register':
-                    if sl.size == 4:
-                        result.append("\tstorl\tr3,r2,0\t; assign long")
-                    else:
-                        result.append("\tstor\tr3,r2,0\t; assign byte")
+                    result.append("\tmove\tr3,%s,0\t; assign long"%sym.location)
                 elif sym.alloc or sym.storage == 'global':
                     if sr.symbol is not None:
                         if sym.size == 4:
