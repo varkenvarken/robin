@@ -39,11 +39,37 @@
 	wire [32:0] extend = {a[31],a};
 	wire [32:0] min_a = -extend;
 	wire [32:0] cmp = sub[31] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
-	wire [32:0] shiftl = {a[31:0],1'b0};
+
+	//wire [32:0] shiftl = {a[31:0],1'b0};
+	wire shiftla0 = b[3:0] == 4'd0;
+	wire shiftla1 = b[3:0] == 4'd1;
+	wire shiftla2 = b[3:0] == 4'd2;
+	wire shiftla3 = b[3:0] == 4'd3;
+	wire shiftla4 = b[3:0] == 4'd4;
+	wire shiftla5 = b[3:0] == 4'd5;
+	wire shiftla6 = b[3:0] == 4'd6;
+	wire shiftla7 = b[3:0] == 4'd7;
+	wire shiftla8 = b[3:0] == 4'd8;
+	wire shiftla9 = b[3:0] == 4'd9;
+	wire shiftla10 = b[3:0] == 4'd10;
+	wire shiftla11 = b[3:0] == 4'd11;
+	wire shiftla12 = b[3:0] == 4'd12;
+	wire shiftla13 = b[3:0] == 4'd13;
+	wire shiftla14 = b[3:0] == 4'd14;
+	wire shiftla15 = b[3:0] == 4'd15;
+	wire [15:0] shiftla16 = {shiftla15,shiftla14,shiftla13,shiftla12,shiftla11,shiftla10,shiftla9,shiftla8,shiftla7,shiftla6,shiftla5,shiftla4,shiftla3,shiftla2,shiftla1,shiftla0};
+	//wire [31:0] BD = a[15: 0] * shiftla16;
+	//wire [31:0] AD = a[31:16] * shiftla16;
+	//wire [47:0] S = {16'b0, BD} + {AD,16'b0};
+	//wire [31:0] shiftla = b[4] ? {S[15:0],16'b0} : S[31:0];
+
 	wire [32:0] shiftr = {a[0],1'b0,a[31:1]};
-	wire [31:0] mult_al_bl = a[15: 0] * b[15: 0];
+
+	wire shiftq = op[4:0] == 12;
+	
+	wire [31:0] mult_al_bl = a[15: 0] * (shiftq ? shiftla16 : b[15: 0]);
 	wire [31:0] mult_al_bh = a[15: 0] * b[31:16];
-	wire [31:0] mult_ah_bl = a[31:16] * b[15: 0];
+	wire [31:0] mult_ah_bl = a[31:16] * (shiftq ? shiftla16 : b[15: 0]);
 	wire [31:0] mult_ah_bh = a[31:16] * b[31:16];
 	wire [63:0] mult64 = {32'b0,mult_al_bl} + {16'b0,mult_al_bh,16'b0} + {16'b0,mult_ah_bl,16'b0} + {mult_ah_bh,32'b0};
 
@@ -63,7 +89,9 @@
 				op[4:0] == 8 ? cmp :
 				op[4:0] == 9 ? {1'b0, a} :
 
-				op[4:0] == 12 ? shiftl :
+				//op[4:0] == 12 ? shiftl :
+				//op[4:0] == 12 ? {1'b0,b[4]?{shiftla16,16'b0}:{16'b0,shiftla16}} :
+				shiftq ? {1'b0, mult64[31:0]} :
 				op[4:0] == 13 ? shiftr :
 
 				op[4:0] == 16 ? {17'b0, mult_al_bl} :
