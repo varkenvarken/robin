@@ -638,13 +638,13 @@ class Visitor(c_ast.NodeVisitor):
         labelcount += 1
         return "%s_%04d"%(prefix,labelcount)
 
-    def visit_If(self, node):
+    def cond(self, node, prefix):
         result = []
         result.append(self.visit(node.cond).code)
         result.append("\ttest\tr2")
-        endif_label = self.label("endif")
+        endif_label = self.label("end" + prefix)
         if node.iffalse:
-            else_label = self.label("else")
+            else_label = self.label("else" + prefix)
             result.append("\tbeq\t" + else_label)
             result.append(self.visit(node.iftrue).code)
             result.append("\tbra\t" + endif_label)
@@ -655,6 +655,13 @@ class Visitor(c_ast.NodeVisitor):
             result.append(self.visit(node.iftrue).code)
         result.append(endif_label+":")
         return value(False,0,"\n".join(result))
+
+    def visit_If(self, node):
+        return self.cond(node, "_ifstmt")
+
+    def visit_TernaryOp(self, node):
+        return self.cond(node, "_condop")
+        
 
     def visit_While(self, node):
         result = []
@@ -738,6 +745,9 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_EmptyStatement(self, node):
         return value(True,0,"\t;empty statement")
+
+    def visit_ExprList(self, node):
+        return value(False, 0, "\n".join([self.visit(e).code for e in node.exprs]))
 
 @logger.catch
 def process(filename):
