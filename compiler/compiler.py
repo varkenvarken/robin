@@ -141,7 +141,6 @@ class Visitor(c_ast.NodeVisitor):
         
         return value(True, None, "\n".join([self.visit(c).code for c in node]))
             
-
     def codeformat(self, code):
         lines = code.split('\n')
         formatted = []
@@ -169,6 +168,10 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_FuncDef(self, node):
         scope = 1
+
+        self.continue_target = None
+        self.break_target = None
+
         #print(node, file=sys.stderr)
         symbols[node.decl.name] = symbol('global',None,node)  # TODO include signature and deal with forward declarations
         symbols.dup()
@@ -557,6 +560,9 @@ class Visitor(c_ast.NodeVisitor):
                 result.append('\tlong 0\t\t; missing initializer, default to 0')
         return value(True, sym.size, "\n".join(result))
 
+    def visit_DeclList(self, node):
+        return value(False, 0, "\n".join([self.visit(d).code for d in node.decls]))
+
     def visit_Assignment(self, node):
         result = []
         if node.op == '=':
@@ -657,6 +663,8 @@ class Visitor(c_ast.NodeVisitor):
         result = []
         while_label = self.label("while")
         endwhile_label = self.label("endwhile")
+        orig_ct = self.continue_target
+        orig_bt = self.break_target
         self.continue_target = while_label
         self.break_target = endwhile_label
         result.append(while_label+":")
@@ -666,24 +674,54 @@ class Visitor(c_ast.NodeVisitor):
         result.append(self.visit(node.stmt).code)
         result.append("\tbra\t" + while_label)
         result.append(endwhile_label+":")
-        self.continue_target = None
-        self.break_target = None
+        self.continue_target = orig_ct
+        self.break_target = orig_bt
         return value(False, 0, "\n".join(result))
 
     def visit_DoWhile(self, node):
         result = []
         dowhile_label = self.label("dowhile")
+        conddowhile_label = self.label("conddowhile")
         enddowhile_label = self.label("enddowhile")
-        self.continue_target = dowhile_label
+        orig_ct = self.continue_target
+        orig_bt = self.break_target
+        self.continue_target = conddowhile_label
         self.break_target = enddowhile_label
         result.append(dowhile_label+":")
         result.append(self.visit(node.stmt).code)
+        result.append(conddowhile_label+":")
         result.append(self.visit(node.cond).code)
         result.append("\ttest\tr2")
         result.append("\tbne\t" + dowhile_label)
         result.append(enddowhile_label+":")
-        self.continue_target = None
-        self.break_target = None
+        self.continue_target = orig_ct
+        self.break_target = orig_bt
+        return value(False, 0, "\n".join(result))
+
+    def visit_For(self,node):
+        result = []
+        for_label = self.label("for")
+        endfor_label = self.label("endfor")
+        orig_ct = self.continue_target
+        orig_bt = self.break_target
+        self.continue_target = for_label
+        self.break_target = endfor_label
+        if node.init is not None:
+            result.append(self.visit(node.init).code)
+        result.append(for_label+":")
+        if node.cond is not None:
+            result.append(self.visit(node.cond).code)  # if cond is none it should be treated as a non zero constant
+            result.append("\ttest\tr2")
+            result.append("\tbeq\t" + endfor_label)
+        else:
+            result.append("\t; missing for condition, always true")         
+        result.append(self.visit(node.stmt).code)
+        if node.next is not None:
+            result.append(self.visit(node.next).code)
+        result.append("\tbra\t" + for_label)
+        result.append(endfor_label+":")
+        self.continue_target = orig_ct
+        self.break_target = orig_bt
         return value(False, 0, "\n".join(result))
 
     def visit_Continue(self, node):
