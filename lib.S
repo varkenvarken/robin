@@ -67,14 +67,14 @@
 	alu ${s},${x},${y}
 #end
 
-#define shiftright x
+#define shiftright r,x,n
 	load aluop,#alu_shiftr
-	alu ${x},${x},1
+	alu ${r},${x},${n}
 #end
 
-#define shiftleft x
+#define shiftleft r,x,n
 	load aluop,#alu_shiftl
-	alu ${x},${x},1
+	alu ${r},${x},${n}
 #end
 
 #define stackdef
