@@ -40,36 +40,35 @@
 	wire [32:0] min_a = -extend;
 	wire [32:0] cmp = sub[31] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
 
-	wire shiftq    = op[4:0] == 12;		// true if operaration is shift left
-	wire shiftlo   = shiftq & ~b[4];	// true if shifting < 16 bits
-	wire shifthi   = shiftq &  b[4];	// true if shifting >= 16 bits
-	wire shiftout  = b[5];				// true if shifting 32 bits
+	wire shiftq    = op[4:0] == 12;			// true if operaration is shift left
+	wire shiftqr   = op[4:0] == 13;			// true if operaration is shift right
+	wire [5:0] invertshift = 6'd32 - {1'b0,b[4:0]};
+	wire [4:0] nshift = shiftqr ? invertshift[4:0] : b[4:0];
+	wire shiftlo   = (shiftq|shiftqr) & ~nshift[4];	// true if shifting < 16 bits
+	wire shifthi   = (shiftq|shiftqr) &  nshift[4];	// true if shifting >= 16 bits
 
 	// determine power of two
-	wire shiftla0  = b[3:0]  == 4'd0;	// 2^0 = 1
-	wire shiftla1  = b[3:0]  == 4'd1;	// 2^1 = 2
-	wire shiftla2  = b[3:0]  == 4'd2;	// 2^2 = 3
-	wire shiftla3  = b[3:0]  == 4'd3;	// ... etc 
-	wire shiftla4  = b[3:0]  == 4'd4;
-	wire shiftla5  = b[3:0]  == 4'd5;
-	wire shiftla6  = b[3:0]  == 4'd6;
-	wire shiftla7  = b[3:0]  == 4'd7;
-	wire shiftla8  = b[3:0]  == 4'd8;
-	wire shiftla9  = b[3:0]  == 4'd9;
-	wire shiftla10 = b[3:0]  == 4'd10;
-	wire shiftla11 = b[3:0]  == 4'd11;
-	wire shiftla12 = b[3:0]  == 4'd12;
-	wire shiftla13 = b[3:0]  == 4'd13;
-	wire shiftla14 = b[3:0]  == 4'd14;
-	wire shiftla15 = b[3:0]  == 4'd15;
+	wire shiftla0  = nshift[3:0]  == 4'd0;	// 2^0 = 1
+	wire shiftla1  = nshift[3:0]  == 4'd1;	// 2^1 = 2
+	wire shiftla2  = nshift[3:0]  == 4'd2;	// 2^2 = 3
+	wire shiftla3  = nshift[3:0]  == 4'd3;	// ... etc 
+	wire shiftla4  = nshift[3:0]  == 4'd4;
+	wire shiftla5  = nshift[3:0]  == 4'd5;
+	wire shiftla6  = nshift[3:0]  == 4'd6;
+	wire shiftla7  = nshift[3:0]  == 4'd7;
+	wire shiftla8  = nshift[3:0]  == 4'd8;
+	wire shiftla9  = nshift[3:0]  == 4'd9;
+	wire shiftla10 = nshift[3:0]  == 4'd10;
+	wire shiftla11 = nshift[3:0]  == 4'd11;
+	wire shiftla12 = nshift[3:0]  == 4'd12;
+	wire shiftla13 = nshift[3:0]  == 4'd13;
+	wire shiftla14 = nshift[3:0]  == 4'd14;
+	wire shiftla15 = nshift[3:0]  == 4'd15;
 	// combine into 16 bit word
 	wire [15:0] shiftla16 = {shiftla15,shiftla14,shiftla13,shiftla12,
 							 shiftla11,shiftla10,shiftla9 ,shiftla8 ,
 							 shiftla7 ,shiftla6 ,shiftla5 ,shiftla4 ,
 							 shiftla3 ,shiftla2 ,shiftla1 ,shiftla0};
-
-
-	wire [32:0] shiftr = {a[0],1'b0,a[31:1]};
 
 	// 4 16x16 bit partial multiplications
 	// the multiplier is either the b operand or a power of two for a shift
@@ -88,21 +87,21 @@
 	wire [32:0] result;
 
 	assign result = 
-				op[4:0] == 0 ? add :
-				op[4:0] == 1 ? adc :
-				op[4:0] == 2 ? sub :
-				op[4:0] == 3 ? sbc :
+				op[4:0] == 0  ? add :
+				op[4:0] == 1  ? adc :
+				op[4:0] == 2  ? sub :
+				op[4:0] == 3  ? sbc :
 
-				op[4:0] == 4 ? b_or :
-				op[4:0] == 5 ? b_and :
-				op[4:0] == 6 ? b_not :
-				op[4:0] == 7 ? b_xor :
+				op[4:0] == 4  ? b_or :
+				op[4:0] == 5  ? b_and :
+				op[4:0] == 6  ? b_not :
+				op[4:0] == 7  ? b_xor :
 
-				op[4:0] == 8 ? cmp :
-				op[4:0] == 9 ? {1'b0, a} :
+				op[4:0] == 8  ? cmp :
+				op[4:0] == 9  ? {1'b0, a} :
 
-				shiftq ? {1'b0, mult64[31:0]} :
-				op[4:0] == 13 ? shiftr :
+					  shiftq  ? {1'b0, mult64[31:0]} :
+					  shiftqr ? {1'b0, mult64[63:32]} :
 
 				op[4:0] == 16 ? {17'b0, mult_al_bl} :
 				op[4:0] == 17 ? {1'b0, mult64[31:0]} :
