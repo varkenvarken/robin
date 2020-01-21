@@ -8,7 +8,7 @@ TOP = robin.v
 PCF = icebreaker.pcf
 DEVICE = --up5k
 PACKAGE = sg48
-PLACER = sa  # heap
+PLACER = heap  # sa
 PLACERLOG = placer.log
 OUTPUT = $(patsubst %.v,%.bin,$(TOP))
 
