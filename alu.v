@@ -40,6 +40,7 @@
 	wire [32:0] min_a = -extend;
 	wire [32:0] cmp = sub[31] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
 
+<<<<<<< HEAD
 	wire shiftq    = op[4:0] == 12;		// true if operaration is shift left
 	wire shiftqr   = op[4:0] == 13;		// true if operaration is shift right
 	wire doshift   = shiftq | shiftqr;
@@ -47,6 +48,14 @@
 	wire [4:0] nshift = shiftqr ? invertshift[4:0] : b[4:0];
 	wire shiftlo   = doshift & ~nshift[4];	// true if shifting < 16 bits
 	wire shifthi   = doshift &  nshift[4];	// true if shifting >= 16 bits
+=======
+	wire shiftq    = op[4:0] == 12;			// true if operaration is shift left
+	wire shiftqr   = op[4:0] == 13;			// true if operaration is shift right
+	wire [5:0] invertshift = 6'd32 - {1'b0,b[4:0]};
+	wire [4:0] nshift = shiftqr ? invertshift[4:0] : b[4:0];
+	wire shiftlo   = (shiftq|shiftqr) & ~nshift[4];	// true if shifting < 16 bits
+	wire shifthi   = (shiftq|shiftqr) &  nshift[4];	// true if shifting >= 16 bits
+>>>>>>> 1b97b1ff460071cda97e93979b877c917e9d16b2
 
 	// determine power of two
 	wire shiftla0  = nshift[3:0]  == 4'd0;	// 2^0 = 1
@@ -88,21 +97,26 @@
 	wire [32:0] result;
 
 	assign result = 
-				op[4:0] == 0 ? add :
-				op[4:0] == 1 ? adc :
-				op[4:0] == 2 ? sub :
-				op[4:0] == 3 ? sbc :
+				op[4:0] == 0  ? add :
+				op[4:0] == 1  ? adc :
+				op[4:0] == 2  ? sub :
+				op[4:0] == 3  ? sbc :
 
-				op[4:0] == 4 ? b_or :
-				op[4:0] == 5 ? b_and :
-				op[4:0] == 6 ? b_not :
-				op[4:0] == 7 ? b_xor :
+				op[4:0] == 4  ? b_or :
+				op[4:0] == 5  ? b_and :
+				op[4:0] == 6  ? b_not :
+				op[4:0] == 7  ? b_xor :
 
-				op[4:0] == 8 ? cmp :
-				op[4:0] == 9 ? {1'b0, a} :
+				op[4:0] == 8  ? cmp :
+				op[4:0] == 9  ? {1'b0, a} :
 
+<<<<<<< HEAD
 				shiftq  ? {1'b0, mult64[31:0]} :
 				shiftqr ? {1'b0, mult64[63:32]} :
+=======
+					  shiftq  ? {1'b0, mult64[31:0]} :
+					  shiftqr ? {1'b0, mult64[63:32]} :
+>>>>>>> 1b97b1ff460071cda97e93979b877c917e9d16b2
 
 				op[4:0] == 16 ? {17'b0, mult_al_bl} :
 				op[4:0] == 17 ? {1'b0, mult64[31:0]} :
