@@ -257,7 +257,7 @@ class Visitor(c_ast.NodeVisitor):
                 ]
             elif symbol.storage == 'global':
                 result = [
-                    "\tloadl\tr2,#%s\t\t; load global symbol"%node.name
+                    "\tloadl\tr2,#%s\t\t; load adddress of global symbol"%node.name
                 ]
             else:
                 print('Unexpected symbol storage %s with ID %s'%(symbol.storage,node.name),file=sys.stderr)
@@ -273,7 +273,7 @@ class Visitor(c_ast.NodeVisitor):
         alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mul', '/': 'alu_divs',
             '==': 'alu_cmp', '<': 'alu_cmp', '>': 'alu_cmp', '>=': 'alu_cmp', '<=': 'alu_cmp', '!=': 'alu_cmp',
             '&': 'alu_and', '|': 'alu_or','^': 'alu_xor',
-            '&&': 'alu_and', '||': 'alu_or',
+            '&&': 'alu_and', '||': 'alu_or', '>>':'alu_shiftl', '<<':'alu_shiftr',
             }
 
         post = self.label('post')
@@ -564,8 +564,13 @@ class Visitor(c_ast.NodeVisitor):
         return value(False, 0, "\n".join([self.visit(d).code for d in node.decls]))
 
     def visit_Assignment(self, node):
+        alu_opmap = {'+=': 'alu_add', '-=': 'alu_sub', '*=': 'alu_mul', '/=': 'alu_divs',
+            '&=': 'alu_and', '|=': 'alu_or','^=': 'alu_xor',
+            '&&=': 'alu_and', '||=': 'alu_or', '>>=':'alu_shiftl', '<<=':'alu_shiftr',
+            }
+        supported_ops = {'+=', '-='};
         result = []
-        if node.op == '=':
+        if node.op == '=' or node.op in supported_ops:
             sr = self.visit(node.rvalue)
             result.append(sr.code)
             result.append('\tpush\tr2')
@@ -578,7 +583,13 @@ class Visitor(c_ast.NodeVisitor):
             sym = sl.symbol
             if not sl.rvalue:
                 if sym.storage == 'register':
-                    result.append("\tmove\tr3,%s,0\t; assign long"%sym.location)
+                    if node.op in supported_ops:
+                        result.append("\tload\taluop,#%s\t\t; %s"%(alu_opmap[node.op],node.op));
+                        result.append("\talu\t%s,%s,r3\t; assign long"%(sym.location,sym.location))
+                        result.append("\tmove\tr2,%s,0\t\t; result of assignment is rvalue to be reused"%sym.location)
+                    else:
+                        result.append("\tmove\tr3,%s,0\t; assign long"%sym.location)
+                        result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
                 elif sym.alloc or sym.storage == 'global':
                     if sr.symbol is not None:
                         if sym.size == 4:
@@ -586,17 +597,33 @@ class Visitor(c_ast.NodeVisitor):
                         else:
                             result.append('\tload\tr3,r3,0')
                     # r2 is lvalue r3 is rvalue
+                    if node.op in supported_ops:
+                        if symbol is not None:
+                            if sym.size == 4:
+                                result.append('\tloadl\tr4,r2,0')
+                            else:
+                                result.append('\tmove\tr4,0,0')
+                                result.append('\tload\tr4,r2,0')
+                        else:
+                            logger.error("problem!!!!")
+                        result.append("\tload\taluop,#%s\t\t; %s"%(alu_opmap[node.op],node.op));
+                        result.append("\talu\tr3,r4,r3\t; assign long")
                     if sym.size == 4:
                         result.append('\tstorl\tr3,r2,0')
                     else:
                         result.append('\tstor\tr3,r2,0')
+                    result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
                 else:  # auto
+                    if node.op in supported_ops:
+                        result.append("\tload\taluop,#%s\t\t; %s"%(alu_opmap[node.op],node.op));
+                        result.append("\talu\tr3,r2,r3\t; assign long")
                     result.append("\tload\tr4,#%d"%sym.location)
                     if sym.size == 4:
-                        result.append("\tstorl\tr2,frame,r4\t; assign long")
+                        result.append("\tstorl\tr3,frame,r4\t; assign long")
                     else:
-                        result.append("\tstor\tr2,frame,r4\t; assign byte")
-                result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
+                        result.append("\tstor\tr3,frame,r4\t; assign byte")
+                    if node.op == '=':
+                        result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
             else:
                 print("assignment to rvalue",file=sys.stderr)
         else:
