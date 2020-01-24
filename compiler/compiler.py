@@ -2,6 +2,10 @@ import sys
 from re import split
 from loguru import logger
 from pycparser import c_parser, c_ast, parse_file
+from uuid import uuid4
+
+from argparse import ArgumentParser
+import sys
 
 class dictstack:  # not yet complete, must be able to distinguish between redeclaration and shadowing
     
@@ -101,10 +105,18 @@ class value:
     def __repr__(self):
         return 'value(%s, %s, %s, %d, %r)' %(self.rvalue, self.size, self.vtype, self.pointerdepth, self.symbol)
 
-labelcount = 0
-
 symbols = dictstack()
 scope = 0 # file
+
+class GlobalUtils:
+    def __init__(self):
+        self.labelcount = 0
+        self.random = str(uuid4()).split('-')[-1]
+
+    def label(self,prefix):
+        self.labelcount += 1
+        logger.debug("labelcount {}, prefix {} {}",self.labelcount,prefix,self.random)
+        return "%s_%04d_%s"%(prefix,self.labelcount,self.random)
 
 # TODO create another visitor that runs first and does constant folding etc.
 
@@ -136,6 +148,10 @@ class ExprVisitor(c_ast.NodeVisitor):
 class Visitor(c_ast.NodeVisitor):
     """class to generate code"""
 
+    def __init__(self, globalutils):
+        super().__init__()
+        self.globalutils = globalutils
+
     def generic_visit(self, node):
         logger.error('Visitor unknown node {}', node)
         
@@ -162,9 +178,7 @@ class Visitor(c_ast.NodeVisitor):
     def visit_FileAST(self, node):
         global symbols
         symbols = dictstack()
-        print("\n        loadl    sp,#stack")
         print("\n".join([self.codeformat(self.visit(item).code) for item in node.ext]))
-        print("\n; room for stack\n        stackdef")
 
     def visit_FuncDef(self, node):
         scope = 1
@@ -200,7 +214,7 @@ class Visitor(c_ast.NodeVisitor):
         symbols["#nargs#"] = n
         symbols["#nauto#"] = 0
         symbols["#registers#"] = registers
-        return_label = self.label("return")
+        return_label = self.globalutils.label("return")
         symbols["#return#"] = return_label
         body = [self.visit(node.body).code]  # only interested in de code
         # TODO some optimization can be done here because the last line from the body might be 'bra returnlabel'
@@ -270,14 +284,14 @@ class Visitor(c_ast.NodeVisitor):
         return ['\tsetne\t%s\t\t; notzero?'%reg]
 
     def visit_BinaryOp(self, node):
-        alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mul', '/': 'alu_divs',
+        alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mullo', '/': 'alu_divs',
             '==': 'alu_cmp', '<': 'alu_cmp', '>': 'alu_cmp', '>=': 'alu_cmp', '<=': 'alu_cmp', '!=': 'alu_cmp',
             '&': 'alu_and', '|': 'alu_or','^': 'alu_xor',
             '&&': 'alu_and', '||': 'alu_or', '>>':'alu_shiftl', '<<':'alu_shiftr',
             }
 
-        post = self.label('post')
-        post2 = self.label('post')
+        post = self.globalutils.label('post')
+        post2 = self.globalutils.label('post')
         post_map = {
             '==' : ['\tseteq\tr2\t\t; =='],
             '!=' : ['\tsetne\tr2\t\t; !='],
@@ -291,17 +305,17 @@ class Visitor(c_ast.NodeVisitor):
         if node.op in alu_opmap:
             sl = self.visit(node.left)
             sr = self.visit(node.right)
-            if sl.ispointer() and sr.ispointer() and node.op not in {'-', '<', '>', '>=', '<=', '==', '!=' }:
+            if sl.ispointer() and sr.ispointer() and (node.op not in {'-', '<', '>', '>=', '<=', '==', '!=' }):
                 logger.error("unsupported op {} for two pointers ignored", node.op)
                 return value(False, 0, "")
-            elif sl.ispointer() and node.op not in {'+', '-', '==', '!=' }:
+            elif sl.ispointer() and not sr.ispointer() and node.op not in {'+', '-', '==', '!=' }:
                 logger.error("unsupported op {} for pointer,value ignored", node.op)
                 return value(False, 0, "")
-            elif sr.ispointer() and node.op not in {'+', '==', '!=' }:
+            elif sr.ispointer() and not sl.ispointer() and node.op not in {'+', '==', '!=' }:
                 logger("unsupported op {} for value,pointer ignored", node.op)
                 return value(False, 0, "")
 
-            endlabel = self.label('binop_end')
+            endlabel = self.globalutils.label('binop_end')
             # note that results never need to be widened because internally we always work with 32 bit
             result = [sl.code]
             if node.op == '&&':
@@ -564,11 +578,11 @@ class Visitor(c_ast.NodeVisitor):
         return value(False, 0, "\n".join([self.visit(d).code for d in node.decls]))
 
     def visit_Assignment(self, node):
-        alu_opmap = {'+=': 'alu_add', '-=': 'alu_sub', '*=': 'alu_mul', '/=': 'alu_divs',
+        alu_opmap = {'+=': 'alu_add', '-=': 'alu_sub', '*=': 'alu_mullo', '/=': 'alu_divs',
             '&=': 'alu_and', '|=': 'alu_or','^=': 'alu_xor',
             '&&=': 'alu_and', '||=': 'alu_or', '>>=':'alu_shiftl', '<<=':'alu_shiftr',
             }
-        supported_ops = {'+=', '-='};
+        supported_ops = {'+=', '-=', '*='};
         result = []
         if node.op == '=' or node.op in supported_ops:
             sr = self.visit(node.rvalue)
@@ -588,8 +602,15 @@ class Visitor(c_ast.NodeVisitor):
                         result.append("\talu\t%s,%s,r3\t; assign long"%(sym.location,sym.location))
                         result.append("\tmove\tr2,%s,0\t\t; result of assignment is rvalue to be reused"%sym.location)
                     else:
-                        result.append("\tmove\tr3,%s,0\t; assign long"%sym.location)
-                        result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
+                        if sl.ispointer():
+                            logger.debug("left {}",sl)
+                            if sl.size == 1:
+                                result.append("\tstor\tr3,r2,0\t; store byte")
+                            else:
+                                result.append("\tstorl\tr3,r2,0\t; store long")
+                        else:
+                            result.append("\tmove\t%s,r3,0\t; assign long from register"%sym.location)
+                            result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
                 elif sym.alloc or sym.storage == 'global':
                     if sr.symbol is not None:
                         if sym.size == 4:
@@ -628,6 +649,7 @@ class Visitor(c_ast.NodeVisitor):
                 print("assignment to rvalue",file=sys.stderr)
         else:
             print("Assignment op %s ignored"%node.op,file=sys.stderr)
+            return value(False, 4, "\n".join(result))
         return value(False, sym.size, "\n".join(result))
 
     def visit_Constant(self, node):
@@ -660,18 +682,13 @@ class Visitor(c_ast.NodeVisitor):
         result.append("\tbra\t"+ symbols["#return#"])
         return value(False,0,"\n".join(result))
 
-    def label(self,prefix):
-        global labelcount
-        labelcount += 1
-        return "%s_%04d"%(prefix,labelcount)
-
     def cond(self, node, prefix):
         result = []
         result.append(self.visit(node.cond).code)
         result.append("\ttest\tr2")
-        endif_label = self.label("end" + prefix)
+        endif_label = self.globalutils.label("end" + prefix)
         if node.iffalse:
-            else_label = self.label("else" + prefix)
+            else_label = self.globalutils.label("else" + prefix)
             result.append("\tbeq\t" + else_label)
             result.append(self.visit(node.iftrue).code)
             result.append("\tbra\t" + endif_label)
@@ -689,11 +706,10 @@ class Visitor(c_ast.NodeVisitor):
     def visit_TernaryOp(self, node):
         return self.cond(node, "_condop")
         
-
     def visit_While(self, node):
         result = []
-        while_label = self.label("while")
-        endwhile_label = self.label("endwhile")
+        while_label = self.globalutils.label("while")
+        endwhile_label = self.globalutils.label("endwhile")
         orig_ct = self.continue_target
         orig_bt = self.break_target
         self.continue_target = while_label
@@ -711,9 +727,9 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_DoWhile(self, node):
         result = []
-        dowhile_label = self.label("dowhile")
-        conddowhile_label = self.label("conddowhile")
-        enddowhile_label = self.label("enddowhile")
+        dowhile_label = self.globalutils.label("dowhile")
+        conddowhile_label = self.globalutils.label("conddowhile")
+        enddowhile_label = self.globalutils.label("enddowhile")
         orig_ct = self.continue_target
         orig_bt = self.break_target
         self.continue_target = conddowhile_label
@@ -731,8 +747,8 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_For(self,node):
         result = []
-        for_label = self.label("for")
-        endfor_label = self.label("endfor")
+        for_label = self.globalutils.label("for")
+        endfor_label = self.globalutils.label("endfor")
         orig_ct = self.continue_target
         orig_bt = self.break_target
         self.continue_target = for_label
@@ -777,7 +793,7 @@ class Visitor(c_ast.NodeVisitor):
         return value(False, 0, "\n".join([self.visit(e).code for e in node.exprs]))
 
 @logger.catch
-def process(filename):
+def process(filename, globalutils):
     # Note that cpp is used. Provide a path to your own cpp or
     # make sure one exists in PATH.
     ast = parse_file(filename, use_cpp=True,
@@ -785,14 +801,19 @@ def process(filename):
 
     #print(ast, file=sys.stderr)
 
-    v = Visitor()
+    v = Visitor(globalutils)
     v.visit(ast)
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        filename  = sys.argv[1]
+    parser = ArgumentParser()
+    parser.add_argument('-d', '--debug', help='show debug messages', action="store_true")
+    parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
+    args = parser.parse_args()
 
     logger.remove()
-    logger.add(sys.stderr, colorize=False, level='DEBUG', backtrace=False)
+    logger.add(sys.stderr, colorize=False, level='DEBUG' if args.debug else 'ERROR', backtrace=False)
 
-    process(filename)
+    gu = GlobalUtils()
+    for filename in args.files:
+        process(filename, gu)
+
