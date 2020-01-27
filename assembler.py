@@ -89,14 +89,14 @@ class Opcode:
 			return self.implied.to_bytes(2,'big')
 		elif self.relative is not None:
 			if(len(values)>1): raise ValueError("relative mode takes 1 value only")
-			#print(address, values, address in changed, file=sys.stderr)
-			try:
-				if address in changed: raise ValueError()
-				rel = values[0] - (address+2)
-				return self.relative.to_bytes(1,'big') + self.signedbytevalue(rel).to_bytes(1,'big', signed=True)  # checks if value fits 8 bit  -128 : 127
-			except ValueError:
-				#print("long branch", file=sys.stderr)
-				return (self.relative * 256).to_bytes(2,'big') + (values[0] - (address+6)).to_bytes(4,'big', signed=True)
+			# relative jumps have a short form too but I can't get my calculations for labels
+			# to work properly with changing lengths due to changes elsewhere so I opt for safety
+			# over optimizing.
+			#rel = values[0] - (address+2)
+			rel = values[0] - (address+6)
+			print("%x %x %d"%(values[0],address,rel), file=sys.stderr)
+			#return self.relative.to_bytes(1,'big') + self.signedbytevalue(rel).to_bytes(1,'big', signed=True)
+			return (self.relative * 256).to_bytes(2,'big') + (rel).to_bytes(4,'big', signed=True)
 		elif self.registers is not None:
 			if(len(values) != 3): raise ValueError("registers mode takes 3 values")
 			for v in values:
@@ -208,17 +208,10 @@ class Opcode:
 					except:
 						opl = 6
 				elif len(values) > 0 and self.name in {'BRA','BRM','BRP','BEQ','BNE',}:
-					if addr in changed: return 6
-					try:  # could also fail on a forward label reference in which case we assume an address ref and therefore a long
-						values = [eval(op,globals(),labels) for op in values]
-						values[0] -= (addr + 2)
-						v = self.bytevalue_int(values[0])
-						opl = 2 if v != 0 else 6
-					except NameError:  # cannot resolve forward ref, assume short branch
-						opl = 2
-					except ValueError:  # not in range [-128,127]
-						opl = 6
-					#print(self.name, values, addr + 2, opl, file=sys.stderr)
+					# relative jumps have a short form too but I can't get my calculations for labels
+					# to work properly with changing lengths due to changes elsewhere so I opt for safety
+					# over optimizing.
+					return 6
 			return opl
 
 opcode_list = [
@@ -311,7 +304,7 @@ def assemble(lines, debug=False):
 		'TMP2':3, 'TMP':2, 'RESULT':4,'tmp2':3, 'tmp':2, 'result':4,
 		# predefined labels for alu operations, lower case only
 		'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
-		'alu_and': 4, 'alu_or' : 5, 'alu_xor': 6, 'alu_not': 7,
+		'alu_and': 5, 'alu_or' : 4, 'alu_xor': 7, 'alu_not': 6,
 		'alu_cmp': 8, 'alu_tst': 9,
 		'alu_shiftl':12, 'alu_shiftr':13,
 		'alu_mul16':16, 'alu_mullo':17, 'alu_mulhi':18,
@@ -328,8 +321,6 @@ def assemble(lines, debug=False):
 	prepass = 0
 	processed_lines = []
 	while(lastaddr != lastaddr0): # this is NOT foolproof is someting follows the code!
-		print(prepass, lastaddr, lastaddr0, file=sys.stderr)
-		#print('0', prepass, {k:v for k,v in labels.items() if k.startswith('return')}, file=sys.stderr)
 		lastaddr0 = lastaddr
 		prepass += 1
 		addr=0
