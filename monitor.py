@@ -476,6 +476,7 @@ class Monitor(cmd.Cmd):
 			addr = 0
 			chunk = 63
 			while length > chunk:
+				print(length,"\r",end='')
 				data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
 				self.ser.write(bytes(data))
 				self.wait(0.1)
