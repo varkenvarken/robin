@@ -28,7 +28,7 @@ directives=byte byte0 word word0 long long0 return call test jump  dub mullo mul
 
 [settings]
 # default extension used when saving files
-extension=S
+extension=s
 
 # the following characters are these which a "word" can contains, see documentation
 #wordchars=_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
