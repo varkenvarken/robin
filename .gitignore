@@ -7,3 +7,9 @@
 /assemblertest/*.bin
 /testoutput/*
 /leading_zeros.hex
+/libc/string/*.bin
+/libc/string/strreverse.s
+/libc/string/strlen.s
+/libc/string/strchr.s
+/libc/string/atoi.s
+/libc/string/atof.s
