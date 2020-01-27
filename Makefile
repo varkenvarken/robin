@@ -8,7 +8,7 @@ TOP = robin.v
 PCF = icebreaker.pcf
 DEVICE = --up5k
 PACKAGE = sg48
-PLACER = heap  # sa
+PLACER = sa # heap
 PLACERLOG = placer.log
 OUTPUT = $(patsubst %.v,%.bin,$(TOP))
 
@@ -25,6 +25,9 @@ all: $(OUTPUT)
 
 rom.hex: lib.S firmware.S
 	$(ASSEMBLER) --hex $^ > $@
+
+leading_zeros.hex: leading_zeros.py
+	python3 $^ > $@
 
 clean:
 	rm -f *.bin *.blif *.tiles *.asc *.json rom.hex
