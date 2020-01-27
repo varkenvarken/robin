@@ -287,18 +287,18 @@ class Visitor(c_ast.NodeVisitor):
         alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mullo', '/': 'alu_divs',
             '==': 'alu_cmp', '<': 'alu_cmp', '>': 'alu_cmp', '>=': 'alu_cmp', '<=': 'alu_cmp', '!=': 'alu_cmp',
             '&': 'alu_and', '|': 'alu_or','^': 'alu_xor',
-            '&&': 'alu_and', '||': 'alu_or', '>>':'alu_shiftl', '<<':'alu_shiftr',
+            '&&': 'alu_and', '||': 'alu_or', '>>':'alu_shiftr', '<<':'alu_shiftl',
             }
 
         post = self.globalutils.label('post')
         post2 = self.globalutils.label('post')
         post_map = {
-            '==' : ['\tseteq\tr2\t\t; =='],
-            '!=' : ['\tsetne\tr2\t\t; !='],
-            '<'  : ['\tsetmin\tr2\t\t; <'],
-            '>'  : ['\tsetmin\tr2\t\t; > (reversed operands)'],
-            '<='  : ['\tsetpos\tr2\t\t; <= (reversed operands)'],
-            '>='  : ['\tsetpos\tr2\t\t; >='],
+            '==' : ['\tseteq\tr2\t\t; ==','\ttest\tr2\t\t; setxxx does not alter flags'],
+            '!=' : ['\tsetne\tr2\t\t; !=','\ttest\tr2\t\t; setxxx does not alter flags'],
+            '<'  : ['\tsetmin\tr2\t\t; <','\ttest\tr2\t\t; setxxx does not alter flags'],
+            '>'  : ['\tsetmin\tr2\t\t; > (reversed operands)','\ttest\tr2\t\t; setxxx does not alter flags'],
+            '<='  : ['\tsetpos\tr2\t\t; <= (reversed operands)','\ttest\tr2\t\t; setxxx does not alter flags'],
+            '>='  : ['\tsetpos\tr2\t\t; >=','\ttest\tr2\t\t; setxxx does not alter flags'],
         }
         reversed_operands = { '>', '<=' }
 
@@ -329,6 +329,7 @@ class Visitor(c_ast.NodeVisitor):
             result.append("\tpush\tr2\t\t; binop(%s)"%node.op)
             result.append(sr.code)
             if node.op in {'&&', '||'}:
+                result.append('\ttest\tr2\t\t;')
                 result.append('\tsetne\tr2\t\t; normalize value to be used in bitwise or/and')
             result.append("\tpop\tr3\t\t; binop(%s)"%node.op)
             # actual alu op
@@ -360,7 +361,8 @@ class Visitor(c_ast.NodeVisitor):
             if isrvalue:
                 raise ValueError('postinc/postdec op on rvalue')
             # pointers themselves are 4 bytes so a pointer depth of 1 actualy points to something with a possible different size
-            size = s.size if s.pointerdepth == 1 else (4 if s.pointerdepth > 1 else 1)
+            size = s.size if s.pointerdepth == 1 else 1
+            logger.debug(size)
             if size == 1:
                 if symbol.storage == 'register':
                     reg = symbol.location
@@ -373,8 +375,25 @@ class Visitor(c_ast.NodeVisitor):
                             '\tload\tr13,#alu_sub\t\t; postdec ptr to byte or value',
                             '\talu\t%s,%s,1\t\t; postdec ptr to byte or value'%(reg,reg),
                         ])
+                elif symbol.storage == 'auto':
+                    ind = symbol.location
+                    if node.op == 'p++':
+                        result.extend([
+                            self.r4index(symbol.location,node.op),
+                            "\tloadl\tr2,frame,r4\t\t; p++ auto var size 1",
+                            "\tmove\tr3,r2,1",
+                            '\tstorl\tr3,frame,r4\t\t;',
+                        ])
+                    else:
+                        result.extend([
+                            self.r4index(symbol.location,node.op),
+                            "\tloadl\tr2,frame,r4\t\t; p-- auto var size 1",
+                            '\tload\tr13,#alu_sub\t\t;',
+                            '\talu\tr3,r3,1\t\t',
+                            '\tstorl\tr3,frame,r4\t\t;',
+                        ])
                 else:
-                    logger.error('postinc/postdec for storage other than register not implemented')
+                    logger.error('postinc/postdec by 1 for storage other than register not implemented [symbol:{}]',symbol)
             elif size == 4:
                 if symbol.storage == 'register':
                     reg = symbol.location
@@ -388,8 +407,24 @@ class Visitor(c_ast.NodeVisitor):
                             '\tload\tr3,#4\t\t; postdec ptr to 4byte value',
                             '\talu\t%s,%s,r3\t\t; postdec ptr to 4byte value'%(reg,reg),
                         ])
+                elif symbol.storage == 'auto':
+                    ind = symbol.location
+                    if node.op == 'p++':
+                        result.extend([
+                            self.r4index(symbol.location,node.op),
+                            "\tloadl\tr2,frame,r4\t\t; p++ auto var size 4",
+                            "\tmover\tr3,r2,1",
+                            '\tstorl\tr3,frame,r4\t\t;',
+                        ])
+                    else:
+                        result.extend([
+                            self.r4index(symbol.location,node.op),
+                            "\tloadl\tr2,frame,r4\t\t; p-- auto var size 4",
+                            "\tmover\tr3,r2,-1",
+                            '\tstorl\tr3,frame,r4\t\t;',
+                        ])
                 else:
-                    logger.error('postinc/postdec for storage other than register not implemented')
+                    logger.error('postinc/postdec by 4 for storage other than register/auto not implemented [symbol:{}]',symbol)
             else:
                 logger.error('postinc/postdec for size != 1 or 4 not implemented')
             # postinc does not change the lvalue status or the pointer depth!
@@ -459,7 +494,7 @@ class Visitor(c_ast.NodeVisitor):
                 unop_code = {
                     '-': ['\tload\tr13,#alu_sub\t\t; unary -','\talu\tr2,0,r2'],
                     '~': ['\tload\tr13,#alu_not\t\t; unary ~','\talu\tr2,r2,0'],
-                    '!': ['\tsetne\tr2\t\t; unary !'],
+                    '!': ['\tseteq\tr2\t\t; unary !'],
                 }
                 result.extend(unop_code[node.op])
         elif node.op == '+':
@@ -484,17 +519,21 @@ class Visitor(c_ast.NodeVisitor):
     def visit_FuncCall(self, node):
         result = []
         nargs = 0
-        for expr in reversed(node.args.exprs):
-            v = self.visit(expr)
+        if node.name.name == '__halt__':
+            result.append('\thalt\t\t\t; explicitely inserted __halt__() call')
+        else:    
+            if node.args is not None:
+                for expr in reversed(node.args.exprs):
+                    v = self.visit(expr)
+                    result.append(v.code)
+                    result.append('\tpush\tr2')
+                    nargs += 1
+            result.append('\tpush\tlink')
+            v = self.visit(node.name)
             result.append(v.code)
-            result.append('\tpush\tr2')
-            nargs += 1
-        result.append('\tpush\tlink')
-        v = self.visit(node.name)
-        result.append(v.code)
-        result.append('\tjal\tlink,r2,0')
-        result.append('\tpop\tlink')
-        result.append('\tmover\tsp,sp,%d'%nargs)
+            result.append('\tjal\tlink,r2,0')
+            result.append('\tpop\tlink')
+            result.append('\tmover\tsp,sp,%d'%nargs)
         rvalue = True  # should depend on return type of function
         return value(rvalue, 4, "\n".join(result))
 
@@ -580,9 +619,9 @@ class Visitor(c_ast.NodeVisitor):
     def visit_Assignment(self, node):
         alu_opmap = {'+=': 'alu_add', '-=': 'alu_sub', '*=': 'alu_mullo', '/=': 'alu_divs',
             '&=': 'alu_and', '|=': 'alu_or','^=': 'alu_xor',
-            '&&=': 'alu_and', '||=': 'alu_or', '>>=':'alu_shiftl', '<<=':'alu_shiftr',
+            '&&=': 'alu_and', '||=': 'alu_or', '>>=':'alu_shiftr', '<<=':'alu_shiftl',
             }
-        supported_ops = {'+=', '-=', '*='};
+        supported_ops = {'+=', '-=', '*=', '/=', '<<=', '>>=', '|=', '&=', '^='};
         result = []
         if node.op == '=' or node.op in supported_ops:
             sr = self.visit(node.rvalue)
@@ -638,11 +677,8 @@ class Visitor(c_ast.NodeVisitor):
                     if node.op in supported_ops:
                         result.append("\tload\taluop,#%s\t\t; %s"%(alu_opmap[node.op],node.op));
                         result.append("\talu\tr3,r2,r3\t; assign long")
-                    result.append("\tload\tr4,#%d"%sym.location)
-                    if sym.size == 4:
-                        result.append("\tstorl\tr3,frame,r4\t; assign long")
-                    else:
-                        result.append("\tstor\tr3,frame,r4\t; assign byte")
+                    result.append("\tload\tr4,#%d"%(sym.location * 4))
+                    result.append("\tstorl\tr3,frame,r4\t; assign byte/long to auto location")
                     if node.op == '=':
                         result.append("\tmove\tr2,r3,0\t\t; result of assignment is rvalue to be reused")
             else:
@@ -796,13 +832,14 @@ class Visitor(c_ast.NodeVisitor):
 def process(filename, globalutils):
     # Note that cpp is used. Provide a path to your own cpp or
     # make sure one exists in PATH.
-    ast = parse_file(filename, use_cpp=True,
+    try:
+        ast = parse_file(filename, use_cpp=True,
                      cpp_args=r'-Iutils/fake_libc_include')
 
-    #print(ast, file=sys.stderr)
-
-    v = Visitor(globalutils)
-    v.visit(ast)
+        v = Visitor(globalutils)
+        v.visit(ast)
+    except Exception as e:
+        logger.error('parse error {}',e)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
