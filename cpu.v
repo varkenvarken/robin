@@ -282,7 +282,8 @@
 														if(takebranch) begin
 															mem_raddr <= r[15];
 															state <= LOADLw;
-														end
+														end else
+															state <= WAIT3;
 													end else if(takebranch) begin
 														r[15] <= branchtarget;
 													end
