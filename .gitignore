@@ -6,3 +6,4 @@
 /assemblertest/*.hex
 /assemblertest/*.bin
 /testoutput/*
+/leading_zeros.hex
