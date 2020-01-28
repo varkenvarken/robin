@@ -94,7 +94,7 @@ class Opcode:
 			# over optimizing.
 			#rel = values[0] - (address+2)
 			rel = values[0] - (address+6)
-			print("%x %x %d"%(values[0],address,rel), file=sys.stderr)
+			#print("%x %x %d"%(values[0],address,rel), file=sys.stderr)
 			#return self.relative.to_bytes(1,'big') + self.signedbytevalue(rel).to_bytes(1,'big', signed=True)
 			return (self.relative * 256).to_bytes(2,'big') + (rel).to_bytes(4,'big', signed=True)
 		elif self.registers is not None:
@@ -296,12 +296,11 @@ def assemble(lines, debug=False):
 	errors = 0
 	# pass1 determine label addresses
 	predefined={  # predefined labels for register names/aliases
-		'R0':0, 'R1':1, 'R2':2, 'TMP':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
+		'R0':0, 'R1':1, 'R2':2, 'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8,
 		'R9':9, 'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15,
 		'r0':0, 'r1':1, 'r2':2, 'r3':3, 'r4':4, 'r5':5, 'r6':6, 'r7':7, 'r8':8,
 		'r9':9, 'r10':10, 'r11':11, 'r12':12, 'r13':13, 'r14':14, 'r15':15,
 		'pc':15, 'PC':15, 'sp':14, 'SP':14, 'flags':13, 'FLAGS':13, 'aluop':13, 'ALUOP':13,'link':12, 'LINK':12, 'FRAME':11, 'frame':11,
-		'TMP2':3, 'TMP':2, 'RESULT':4,'tmp2':3, 'tmp':2, 'result':4,
 		# predefined labels for alu operations, lower case only
 		'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
 		'alu_and': 5, 'alu_or' : 4, 'alu_xor': 7, 'alu_not': 6,
@@ -415,7 +414,7 @@ def assemble(lines, debug=False):
 			processed_lines.append((filename, linenumber, line))
 		lastaddr = addr
 
-	print("number of label resolving passes", prepass, file=sys.stderr)
+	#print("number of label resolving passes", prepass, file=sys.stderr)
 
 	#pass 2, label bit is the same except we generate errors when we cannot resolve
 	code=bytearray()
