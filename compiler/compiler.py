@@ -115,7 +115,7 @@ class GlobalUtils:
 
     def label(self,prefix):
         self.labelcount += 1
-        logger.debug("labelcount {}, prefix {} {}",self.labelcount,prefix,self.random)
+        #logger.debug("labelcount {}, prefix {} {}",self.labelcount,prefix,self.random)
         return "%s_%04d_%s"%(prefix,self.labelcount,self.random)
 
 # TODO create another visitor that runs first and does constant folding etc.
@@ -258,6 +258,7 @@ class Visitor(c_ast.NodeVisitor):
         return value(True, None, "\n".join(preamble + extra_space + movreg + body + postamble))
 
     def visit_ID(self, node):
+        #logger.debug("ID {}",node)
         if node.name in symbols:
             symbol = symbols[node.name]
             if symbol.storage == 'register':
@@ -265,10 +266,17 @@ class Visitor(c_ast.NodeVisitor):
                     '\tmove\tr2,%s,0\t\t; load %s'%(symbol.location,node.name),
                 ]
             elif symbol.storage == 'auto':
-                result = [
-                    self.r4index(symbol.location,node.name),
-                    "\tloadl\tr2,frame,r4"
-                ]
+                #logger.debug('Symbol {}',symbol)
+                if symbol.alloc:
+                    result = [
+                        self.r4index(symbol.location,node.name),
+                        "\tmove\tr2,frame,r4\t\t; load address of auto allocated array"
+                    ]
+                else:
+                    result = [
+                        self.r4index(symbol.location,node.name),
+                        "\tloadl\tr2,frame,r4\t\t; load value of auto variable"
+                    ]
             elif symbol.storage == 'global':
                 result = [
                     "\tloadl\tr2,#%s\t\t; load adddress of global symbol"%node.name
@@ -284,7 +292,7 @@ class Visitor(c_ast.NodeVisitor):
         return ['\tsetne\t%s\t\t; notzero?'%reg]
 
     def visit_BinaryOp(self, node):
-        alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mullo', '/': 'alu_divs',
+        alu_opmap = {'+': 'alu_add', '-': 'alu_sub', '*': 'alu_mullo', '/': 'alu_divs', '%':'alu_rems',
             '==': 'alu_cmp', '<': 'alu_cmp', '>': 'alu_cmp', '>=': 'alu_cmp', '<=': 'alu_cmp', '!=': 'alu_cmp',
             '&': 'alu_and', '|': 'alu_or','^': 'alu_xor',
             '&&': 'alu_and', '||': 'alu_or', '>>':'alu_shiftr', '<<':'alu_shiftl',
@@ -362,7 +370,6 @@ class Visitor(c_ast.NodeVisitor):
                 raise ValueError('postinc/postdec op on rvalue')
             # pointers themselves are 4 bytes so a pointer depth of 1 actualy points to something with a possible different size
             size = s.size if s.pointerdepth == 1 else 1
-            logger.debug(size)
             if size == 1:
                 if symbol.storage == 'register':
                     reg = symbol.location
@@ -519,13 +526,26 @@ class Visitor(c_ast.NodeVisitor):
     def visit_FuncCall(self, node):
         result = []
         nargs = 0
+        rvalue = True
+        size = 4
+        sym = None
         if node.name.name == '__halt__':
             result.append('\thalt\t\t\t; explicitely inserted __halt__() call')
-        else:    
+        else:
+            sym = symbols[node.name.name]    
             if node.args is not None:
+                logger.debug('args {}',node.args)
                 for expr in reversed(node.args.exprs):
                     v = self.visit(expr)
+                    logger.debug('FUNC CALL {} value {} arg {}',node.name.name,v, expr)
                     result.append(v.code)
+                    if type(expr) == c_ast.ArrayRef and v.symbol is not None and v.symbol.alloc:
+                        if v.size == 1 and not v.ispointer():
+                            result.append('\tmove\tr3,0,0\t\t; deref array ref byte')
+                            result.append('\tloadb\tr3,r2,0\t\t; deref array ref byte')
+                            result.append('\tmove\tr2,r3,0\t\t; deref array ref byte')
+                        else:
+                            result.append('\tloadl\tr2,r2,0\t\t; deref array ref long')
                     result.append('\tpush\tr2')
                     nargs += 1
             result.append('\tpush\tlink')
@@ -534,8 +554,9 @@ class Visitor(c_ast.NodeVisitor):
             result.append('\tjal\tlink,r2,0')
             result.append('\tpop\tlink')
             result.append('\tmover\tsp,sp,%d'%nargs)
-        rvalue = True  # should depend on return type of function
-        return value(rvalue, 4, "\n".join(result))
+            size = sym.size
+            rvalue = sym.pointerdepth == 0
+        return value(rvalue, size, "\n".join(result),sym)
 
     def r4index(self,location,name):
         if location >= -8:
@@ -641,8 +662,8 @@ class Visitor(c_ast.NodeVisitor):
                         result.append("\talu\t%s,%s,r3\t; assign long"%(sym.location,sym.location))
                         result.append("\tmove\tr2,%s,0\t\t; result of assignment is rvalue to be reused"%sym.location)
                     else:
-                        if sl.ispointer():
-                            logger.debug("left {}",sl)
+                        if sl.ispointer() and not sr.ispointer():
+                            logger.debug("register assignment,reg holds ptr\n{}\n{}",sl,sr)
                             if sl.size == 1:
                                 result.append("\tstor\tr3,r2,0\t; store byte")
                             else:
