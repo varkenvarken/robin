@@ -13,3 +13,13 @@
 /libc/string/strchr.s
 /libc/string/atoi.s
 /libc/string/atof.s
+/assemblertest/*
+/libc/stdlib/*.bin
+/libc/stdio/*.bin
+/libc/stdio/print.s
+/libc/stdio/putchar.s
+/libc/stdlib/atof.s
+/libc/stdlib/atoi.s
+/libc/stdlib/ftoa.s
+/libc/stdlib/itoa.s
+/libc/stdlib/test.c
