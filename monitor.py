@@ -45,6 +45,7 @@ class Monitor(cmd.Cmd):
 		super().__init__()
 		self.scriptmode = False
 		self.baud = baud
+		self.ser = None
 
 	def complete_file(self, text, line, start_idx, end_idx):
 		return _complete_path(text)
@@ -54,7 +55,6 @@ class Monitor(cmd.Cmd):
 			readline.set_completer_delims(' \t\n')
 		if readline and os.path.exists(histfile):
 			readline.read_history_file(histfile)
-		self.ser = serial.Serial(port=self.dev, baudrate=self.baud, stopbits=serial.STOPBITS_ONE)
 		self.lastaddr = 0
 
 	def postloop(self):
@@ -64,6 +64,8 @@ class Monitor(cmd.Cmd):
 			readline.write_history_file(histfile)
 
 	def precmd(self, line):
+		if self.ser is None:
+			self.ser = serial.Serial(port=self.dev, baudrate=self.baud, stopbits=serial.STOPBITS_ONE)
 		if self.scriptmode: print(line)
 		if line.strip().startswith("#") : return ''
 		return(line)
@@ -147,6 +149,12 @@ class Monitor(cmd.Cmd):
 		while not self.ser.in_waiting:
 			sleep(t)
 
+	def ok(self):
+		if not self.scriptmode:
+			print('\nok          ')  # extra spaces to mask last progress report
+		else:
+			print()
+
 	def do_dump(self, line):
 		"""
 		dump <hexaddr> <length>          dump bytes
@@ -183,7 +191,7 @@ class Monitor(cmd.Cmd):
 					print("")
 					needaddr = True
 			sleep(0.1)
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_dumpw(self, line):
@@ -229,7 +237,7 @@ class Monitor(cmd.Cmd):
 					print("")
 					needaddr = True
 			sleep(0.1)
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_dumpl(self, line):
@@ -276,7 +284,7 @@ class Monitor(cmd.Cmd):
 					print("")
 					needaddr = True
 			sleep(0.1)
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_dumps(self, line):
@@ -306,7 +314,7 @@ class Monitor(cmd.Cmd):
 					print(string[:nul], end='')
 					skip = True
 			sleep(0.1)
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_show(self, line):
@@ -352,7 +360,7 @@ class Monitor(cmd.Cmd):
 					r += 1
 					asbytes = ""
 			sleep(0.1)
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_load(self, line):
@@ -443,13 +451,13 @@ class Monitor(cmd.Cmd):
 								break  # end of file, we're done
 							elif values[3] == 4:
 								ela = (values[4] << 24) + (values[5] << 16)
-								print("ela",ela,line,values)
+								#print("ela",ela,line,values)
 							elif values[3] != 0:
 								print("cannot process record type", line)
 							else:  # a data record
 								addr = values[1] * 256 + values[2]
 								addr += ela
-								print("addr",addr)
+								#print("addr",addr)
 								chunk = values[0]
 								data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
 								self.ser.write(bytes(data))
@@ -476,7 +484,7 @@ class Monitor(cmd.Cmd):
 			addr = 0
 			chunk = 63
 			while length > chunk:
-				print(length,"\r",end='')
+				if not self.scriptmode: print(length,"\r",end='')
 				data = [0x01, ((addr >> 16) & 255), ((addr >> 8) & 255), ((addr) & 255), ((chunk >> 8) & 255), ((chunk) & 255)]
 				self.ser.write(bytes(data))
 				self.wait(0.1)
@@ -526,7 +534,7 @@ class Monitor(cmd.Cmd):
 				sleep(0.1)
 			sleep(1.0) # timeout, we do not know when a program is going to end
 			again = self.ser.in_waiting > 0
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def reads(self):
@@ -588,7 +596,7 @@ class Monitor(cmd.Cmd):
 			except:
 				again = False
 				self.stop = True
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_runps(self, line):
@@ -620,7 +628,7 @@ class Monitor(cmd.Cmd):
 			except:
 				again = False
 				self.stop = True
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_test(self, line):
@@ -657,7 +665,8 @@ class Monitor(cmd.Cmd):
 						error = "not ok (at pos %d, [%s|%s])" % (i," ".join(["%02x"%int(b) for b in compare]), " ".join(["%02x"%int(b) for b in result]))
 					break
 				i += 1
-			if not self.scriptmode or error != 'ok': print(error) 
+			if not self.scriptmode or error != 'ok': print(error)
+			if error != 'ok': raise ValueError("test failed: "+error)
 		return False
 
 	def do_runs(self, line):
@@ -683,7 +692,7 @@ class Monitor(cmd.Cmd):
 				sleep(0.1)
 			sleep(1.0) # timeout, we do not know when a program is going to end
 			again = self.ser.in_waiting > 0
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_flush(self, line):
@@ -699,7 +708,7 @@ class Monitor(cmd.Cmd):
 				if count % 16 == 0:
 					print('')
 			sleep(0.1)
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 	def do_break(self, line):
@@ -729,7 +738,7 @@ class Monitor(cmd.Cmd):
 			except:
 				again = False
 				self.stop = True
-		if not self.scriptmode: print('\nok')
+		self.ok()
 		return False
 
 
@@ -738,30 +747,59 @@ class Monitor(cmd.Cmd):
 		exit		exit monitor program
 		"""
 		self.flush()
+		self.ser = None
 		return True
 
 if __name__ == '__main__':
 	from argparse import ArgumentParser
 	from serial.tools import list_ports
+	import fileinput
+	import sys
 
 	parser = ArgumentParser()
 	parser.add_argument('-t', '--test', help='run in test mode (will not show prompts)', action="store_true")
 	parser.add_argument('-i', '--ice', help='find icestick/icebreaker', action="store_true")
+	parser.add_argument('-x', '--exit', help='exit after script', action="store_true")
 	parser.add_argument('-b', '--baudrate', help='set baudrate', type=int, default=115200)
-	parser.add_argument('dev', nargs='?', default='/dev/ttyUSB1', help='serial device to connect to (will default to /dev/ttyUSB1')
+	parser.add_argument('-d', '--dev', nargs='?', default='/dev/ttyUSB1', help='serial device to connect to (will default to /dev/ttyUSB1')
+	parser.add_argument('files', metavar='FILE', nargs='*', help='files to execute, if not empty implies -t, will not end unless one of the commands encountered is exit or -x is set')
 
 	args = parser.parse_args()
+
+	lines = []
+	if len(args.files):
+		try:
+			lines = [ line for line in fileinput.input(files=args.files) ]
+		except FileNotFoundError as e:
+			print(e, file=sys.stderr)
+			sys.exit(2)
 
 	m = Monitor(baud=args.baudrate)
 	m.dev = args.dev
 	if args.ice:
 		m.dev = sorted([p.device for p in list_ports.comports() if p.vid == 0x0403 and p.pid == 0x6010])[-1]
+
+	m.prompt = ''
+	m.scriptmode = True
+	errors = 0
+	for line in lines:
+		try:
+			if m.onecmd(m.precmd(line)):
+				break
+		except ValueError:
+			errors += 1
 	m.prompt = '' if args.test else '>'
 	m.scriptmode = args.test
-	while True :
-		try:
-			m.cmdloop()
-			break
-		except KeyboardInterrupt:
-			pass
+
+	if errors: sys.exit(2)
+
+	if not args.exit:
+		while True :
+			try:
+				m.cmdloop()
+				break
+			except KeyboardInterrupt:
+				pass
+			except ValueError:
+				pass
 

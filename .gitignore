@@ -23,3 +23,8 @@
 /libc/stdlib/ftoa.s
 /libc/stdlib/itoa.s
 /libc/stdlib/test.c
+/libc/stdlib/Test/test_atof.bin
+/libc/stdlib/Test/test_atoi.bin
+/libc/stdlib/Test/test_ftoa.bin
+/libc/stdlib/Test/test_itoa.bin
+/libc/stdlib/Test/test_mulu32_64_shift.bin
