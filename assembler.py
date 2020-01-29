@@ -140,7 +140,7 @@ class Opcode:
 		if type(v) == str:
 			v = ord(v)
 		if v < -128 or v > 255:
-			raise ValueError()
+			raise ValueError("byte value out of range")
 		return v if v >= 0 else 256 + v
 
 	@staticmethod
@@ -148,7 +148,7 @@ class Opcode:
 		if type(v) == str:
 			v = ord(v)
 		if v < -128 or v > 255:
-			raise ValueError()
+			raise ValueError("byte value out of range")
 		return v.to_bytes(1, 'big', signed=v<0)
 
 
@@ -157,7 +157,7 @@ class Opcode:
 		if type(v) == str:
 			v = ord(v)
 		if v < -2**15 or v > 2**16-1:
-			raise ValueError()
+			raise ValueError("word value out of range")
 		return v.to_bytes(2, 'big', signed=v<0)
 
 	@staticmethod
@@ -165,13 +165,13 @@ class Opcode:
 		if type(v) == str:
 			v = ord(v)
 		if v < -2**31 or v > 2**32-1:
-			raise ValueError()
+			raise ValueError("long value out of range")
 		return v.to_bytes(4, 'big', signed=v<0)
 
 	@staticmethod
 	def longaddress(v):    # long means fit for our address space of 256K i.e. 2^18
 		if v < 0 or v > 2**18-1:
-			raise ValueError()
+			raise ValueError("long address out of range")
 		return v.to_bytes(2,'big')
 
 	@staticmethod
@@ -464,7 +464,7 @@ def assemble(lines, debug=False):
 						dcode = "%04x %s"%(addr, " ".join("%02x"%b for b in newcode))
 				addr += len(newcode)
 			except Exception as e:
-				print("Error: %s[%d] %s %s"%(filename, linenumber, e.args[0], line), file=sys.stderr)
+				print("Error: %s[%d] %s %s"%(filename, linenumber, e.args, line), file=sys.stderr)
 		if debug: print("%-30s %s"%(dcode, dline), file=sys.stderr)
 	# return results as bytes
 	return code, labels, errors
