@@ -13,22 +13,24 @@ TEST = Test
 
 all: $(OUTPUT)
 
-%.s: %.c
+sfiles := $(patsubst %.c,%.s,$(wildcard *.c))
+
+$(sfiles):%.s: %.c
 	$(COMPILER) $< > $@
 
-$(TEST)/test_atoi.bin: $(MACROS) test_atoi.s $(STRING)/strlen.s $(STRING)/strreverse.s atoi.s
+$(TEST)/test_atoi.bin: $(MACROS) $(TEST)/test_atoi.s $(STRING)/strlen.s $(STRING)/strreverse.s atoi.s
 	$(ASSEMBLER) $^ > $@
 
-$(TEST)/test_atof.bin: $(MACROS) test_atof.s $(STRING)/strlen.s $(STRING)/strreverse.s $(STRING)/strchr.s atoi.s atof.s
+$(TEST)/test_atof.bin: $(MACROS) $(TEST)/test_atof.s $(STRING)/strlen.s $(STRING)/strreverse.s $(STRING)/strchr.s atoi.s atof.s
 	$(ASSEMBLER) $^ > $@
 
-$(TEST)/test_itoa.bin: $(MACROS) test_itoa.s $(STRING)/strlen.s $(STRING)/strreverse.s itoa.s
+$(TEST)/test_itoa.bin: $(MACROS) $(TEST)/test_itoa.s $(STRING)/strlen.s $(STRING)/strreverse.s itoa.s
 	$(ASSEMBLER) $^ > $@
 
-$(TEST)/test_ftoa.bin: $(MACROS) test_ftoa.s $(STRING)/strlen.s $(STRING)/strreverse.s $(STRING)/strchr.s mulu32_64_shift.s itoa.s ftoa.s
+$(TEST)/test_ftoa.bin: $(MACROS) $(TEST)/test_ftoa.s $(STRING)/strlen.s $(STRING)/strreverse.s $(STRING)/strchr.s mulu32_64_shift.s itoa.s ftoa.s
 	$(ASSEMBLER) $^ > $@
 
-$(TEST)/test_mulu32_64_shift.bin: $(MACROS) test_mulu32_64_shift.s mulu32_64_shift.s
+$(TEST)/test_mulu32_64_shift.bin: $(MACROS) $(TEST)/test_mulu32_64_shift.s mulu32_64_shift.s
 	$(ASSEMBLER) $^ > $@
 
 clean:
@@ -38,3 +40,6 @@ test:
 	(cd Test; $(MONITOR) -b115200 -i -x test_all.cmd)
 
 .PHONY: all clean test
+
+
+
