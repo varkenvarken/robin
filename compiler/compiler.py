@@ -327,6 +327,16 @@ class Visitor(c_ast.NodeVisitor):
             endlabel = self.globalutils.label('binop_end')
             # note that results never need to be widened because internally we always work with 32 bit
             result = [sl.code]
+
+            logger.debug("binop left {}",node.left)
+            if type(node.left) == c_ast.ArrayRef and sl.symbol is not None and sl.symbol.alloc:
+                if sl.size == 1 and not sl.ispointer():
+                    result.append('\tmove\tr3,0,0\t\t; deref array ref byte binop left')
+                    result.append('\tloadb\tr3,r2,0\t\t; deref array ref byte binop left')
+                    result.append('\tmove\tr2,r3,0\t\t; deref array ref byte binop left')
+                else:
+                    result.append('\tloadl\tr2,r2,0\t\t; deref array ref long binop left')
+                            
             if node.op == '&&':
                 result.append('\ttest\tr2\t\t; && short circuit if left side is false')
                 result.append('\tsetne\tr2\t\t; also normalize value to be used in bitwise and')
@@ -351,7 +361,7 @@ class Visitor(c_ast.NodeVisitor):
             if node.op in post_map:
                 result.extend(post_map[node.op])
             # end target of short circuit expression
-            if node.op in { '&&', '|| ' }:
+            if node.op in { '&&', '||' }:
                 result.append(endlabel+':')
             # lvalue is converted to rvalue unless just the left hand side is a pointer
             rvalue = True
@@ -504,7 +514,7 @@ class Visitor(c_ast.NodeVisitor):
                 unop_code = {
                     '-': ['\tload\tr13,#alu_sub\t\t; unary -','\talu\tr2,0,r2'],
                     '~': ['\tload\tr13,#alu_not\t\t; unary ~','\talu\tr2,r2,0'],
-                    '!': ['\tseteq\tr2\t\t; unary !'],
+                    '!': ['\ttest\tr2\t\t; unary !','\tseteq\tr2\t\t; unary !'],
                 }
                 result.extend(unop_code[node.op])
         elif node.op == '+':
