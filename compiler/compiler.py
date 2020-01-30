@@ -73,6 +73,7 @@ class symbol:
                 self.allocbytes = int(ev.visit(arrayalloc)[0]) * self.size
 
     def deref(self):
+        logger.debug("{}",self)
         ds = symbol(self.storage, self.location)
         ds.size = self.size
         ds.type = self.type
@@ -352,15 +353,17 @@ class Visitor(c_ast.NodeVisitor):
             # end target of short circuit expression
             if node.op in { '&&', '|| ' }:
                 result.append(endlabel+':')
-            # lvalue is converted to rvalue unless just the right hand side is a pointer
+            # lvalue is converted to rvalue unless just the left hand side is a pointer
             rvalue = True
             if sl.ispointer() and not sr.ispointer(): rvalue = False
-            return value(rvalue, 4, "\n".join(result))
+            logger.debug("{}\n{}",sl,sr)
+            return value(rvalue, sl.size, "\n".join(result), sl.symbol)
         else:
             logger.error("Binary op {} ignored",node.op)
             return value(False, 0, "")
 
     def visit_UnaryOp(self, node):
+        logger.debug("{}", node.expr)
         s = self.visit(node.expr)
         result = [s.code]
         isrvalue = s.rvalue
@@ -491,7 +494,7 @@ class Visitor(c_ast.NodeVisitor):
                 else:
                     logger.error('deref for storage other than register not implemented')
             else:
-                logger('deref for size != 1 not implemented')
+                logger.error('deref for size != 1 not implemented {}', s)
             symbol = symbol.deref()
             isrvalue = s.pointerdepth < 1
         elif node.op in {'-', '~', '!' }:
