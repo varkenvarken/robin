@@ -23,6 +23,7 @@ import cmd
 from glob import glob
 import os.path
 from threading import Thread
+from struct import pack,unpack
 
 try:
 	import readline
@@ -274,6 +275,8 @@ class Monitor(cmd.Cmd):
 							print("%10d "%(w), end='')
 						else:
 							print("%11d "%(w), end='')
+					elif 'f' in self.options:
+						print("%11g "%(unpack('>f',pack('>I',w))), end='')
 					else:
 						print("%08x "%(w), end='')
 					nb = 0
@@ -377,7 +380,7 @@ class Monitor(cmd.Cmd):
 			self.ser.write(bytes(d if d>=0 else 256+d for d in self.hexbytes))
 			self.wait(0.1)
 			self.flush(len(self.hexbytes))
-			if not self.scriptmode: print('ok')
+			self.ok()
 		else:
 			print("no bytes specified or more than 65535")
 		return False
@@ -399,7 +402,7 @@ class Monitor(cmd.Cmd):
 			self.ser.write(bytes(data))
 			self.wait(0.1)
 			self.flush(len(self.hexbytes))
-			if not self.scriptmode: print('ok')
+			self.ok()
 		else:
 			print("no words specified or more than 32767")
 		return False
@@ -421,7 +424,7 @@ class Monitor(cmd.Cmd):
 			self.ser.write(bytes(data))
 			self.wait(0.1)
 			self.flush(len(self.hexbytes))
-			if not self.scriptmode: print('ok')
+			self.ok()
 		else:
 			print("no words specified or more than 16383")
 		return False
@@ -504,7 +507,7 @@ class Monitor(cmd.Cmd):
 				self.ser.write(send)
 				self.wait(0.1)
 				self.flush(len(send))
-		if not self.scriptmode: print('ok')
+		self.ok()
 		return False
 
 	def do_run(self, line):
@@ -570,6 +573,13 @@ class Monitor(cmd.Cmd):
 			if self.stop:
 				return
 
+	def do_eval(self, line):
+		"""
+		eval <python expression>
+		"""
+		from struct import pack,unpack
+		print(eval(line,globals(),locals()))
+		self.ok()
 
 	def do_runp(self, line):
 		"""
@@ -747,7 +757,7 @@ class Monitor(cmd.Cmd):
 		exit		exit monitor program
 		"""
 		self.flush()
-		self.ser = None
+		#self.ser = None
 		return True
 
 if __name__ == '__main__':
