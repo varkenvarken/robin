@@ -23,6 +23,16 @@ char *ftoa(float f, char *str){
     *s++ = '.';
     s = itoa(fracpartc[1],s);
     *s = 0;
+    // strip trailing zeros that follow another digit
+    int lastzero;
+    lastzero = (*--s == '0');
+    while(lastzero){ // s is pointing to the last zero
+        char c = *(s-1);
+        if(c >= '0' && c <= '9'){
+            *s-- = 0;
+            lastzero = c == '0';
+        }
+        else break;
+    }
     return str;
 }
-
