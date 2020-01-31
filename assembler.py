@@ -280,17 +280,10 @@ opcodes = {op.name:op for op in opcode_list}
 del opcode_list
 
 def stripcomment(line):
-	c1 = line.find("//")  # c++ convention
 	c2 = line.find(";")  # asm convention
 
-	if c1 < 0 :
-		if c2 < 0:
-			return line
-		c = c2
-	else:
-		c = min(c1,c2) if c2 >= 0 else c1
-	line = line[:c]
-	return line
+	if c2 < 0: return line
+	return line[:c2]
 
 def assemble(lines, debug=False):
 	errors = 0
