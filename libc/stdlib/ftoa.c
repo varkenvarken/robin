@@ -13,9 +13,13 @@ char *ftoa(float f, char *str){
     int fracpart = man - (intpart << (shift));
     int fracpartc[2];
 
-    // external 32bitx32bit -> 64 bit and then shift right; stor hi,lo in fracpartc
-    _mulu32_64_shift(fracpart,100000,shift,fracpartc);
-
+    if(!exp){ // zero
+        intpart = 0;
+        fracpartc[1] = 0;
+    }else{
+        // external 32bitx32bit -> 64 bit and then shift right; stor hi,lo in fracpartc
+        _mulu32_64_shift(fracpart,100000,shift,fracpartc);
+    }
   
     if(sign != 0) *s++ = '-';
     s = itoa(intpart,s);
