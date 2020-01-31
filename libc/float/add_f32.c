@@ -10,7 +10,7 @@ int lz8(int a){
 int leadingzeros(int a){
     int n       = lz8(a>>24);
     if(n==8 ) n+= lz8(a>>16);
-    if(n==16) n+= lz8(a<<8);
+    if(n==16) n+= lz8(a>>8);
     if(n==24) n+= lz8(a);
     return n;
 }

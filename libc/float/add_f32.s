@@ -54,7 +54,7 @@ lz8:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0008_c9162444869c
+        beq     end_ifstmt_0008_dfce99dcd0d8
         loadl   r2,#n               ; load adddress of global symbol
         push    r2                  
         move    r2,r10,0            ; load a
@@ -74,10 +74,10 @@ lz8:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0008_c9162444869c:
+end_ifstmt_0008_dfce99dcd0d8:
         move    r2,r9,0             ; load c
-        bra     return_0001_c9162444869c
-return_0001_c9162444869c:
+        bra     return_0001_dfce99dcd0d8
+return_0001_dfce99dcd0d8:
         pop     r10                 
         pop     r9                  
         pop     frame               ; old framepointer
@@ -114,7 +114,7 @@ leadingzeros:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0019_c9162444869c
+        beq     end_ifstmt_0019_dfce99dcd0d8
         move    r2,r10,0            ; load a
         push    r2                  ; binop(>>)
         loadl   r2,#16              ; int
@@ -133,7 +133,7 @@ leadingzeros:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0019_c9162444869c:
+end_ifstmt_0019_dfce99dcd0d8:
         move    r2,r9,0             ; load n
         push    r2                  ; binop(==)
         loadl   r2,#16              ; int
@@ -143,12 +143,12 @@ end_ifstmt_0019_c9162444869c:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0026_c9162444869c
+        beq     end_ifstmt_0026_dfce99dcd0d8
         move    r2,r10,0            ; load a
-        push    r2                  ; binop(<<)
+        push    r2                  ; binop(>>)
         loadl   r2,#8               ; int
-        pop     r3                  ; binop(<<)
-        load    flags,#alu_shiftl   ; binop(<<)
+        pop     r3                  ; binop(>>)
+        load    flags,#alu_shiftr   ; binop(>>)
         alu     r2,r3,r2            
         push    r2                  
         push    link                
@@ -162,7 +162,7 @@ end_ifstmt_0019_c9162444869c:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0026_c9162444869c:
+end_ifstmt_0026_dfce99dcd0d8:
         move    r2,r9,0             ; load n
         push    r2                  ; binop(==)
         loadl   r2,#24              ; int
@@ -172,7 +172,7 @@ end_ifstmt_0026_c9162444869c:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0033_c9162444869c
+        beq     end_ifstmt_0033_dfce99dcd0d8
         move    r2,r10,0            ; load a
         push    r2                  
         push    link                
@@ -186,10 +186,10 @@ end_ifstmt_0026_c9162444869c:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0033_c9162444869c:
+end_ifstmt_0033_dfce99dcd0d8:
         move    r2,r9,0             ; load n
-        bra     return_0012_c9162444869c
-return_0012_c9162444869c:
+        bra     return_0012_dfce99dcd0d8
+return_0012_dfce99dcd0d8:
         pop     r10                 
         pop     r9                  
         pop     frame               ; old framepointer
@@ -315,7 +315,7 @@ _add_f32_:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     else_ifstmt_0072_c9162444869c
+        beq     else_ifstmt_0072_dfce99dcd0d8
         move    r2,r8,0             ; load signa
         push    r2                  
         mover   r4,0,-3             ; load signc (id node)
@@ -334,7 +334,7 @@ _add_f32_:
         setmin  r2                  ; > (reversed operands)
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0077_c9162444869c
+        beq     else_ifstmt_0077_dfce99dcd0d8
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -367,8 +367,8 @@ _add_f32_:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0076_c9162444869c
-else_ifstmt_0077_c9162444869c:
+        bra     end_ifstmt_0076_dfce99dcd0d8
+else_ifstmt_0077_dfce99dcd0d8:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(<)
         mover   r4,0,-1             ; load expb (id node)
@@ -379,7 +379,7 @@ else_ifstmt_0077_c9162444869c:
         setmin  r2                  ; <
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0085_c9162444869c
+        beq     else_ifstmt_0085_dfce99dcd0d8
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         load    r13,#alu_sub        ; unary -
@@ -413,8 +413,8 @@ else_ifstmt_0077_c9162444869c:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0084_c9162444869c
-else_ifstmt_0085_c9162444869c:
+        bra     end_ifstmt_0084_dfce99dcd0d8
+else_ifstmt_0085_dfce99dcd0d8:
         move    r2,r6,0             ; load mana
         push    r2                  ; binop(+)
         mover   r4,0,-2             ; load manb (id node)
@@ -437,8 +437,8 @@ else_ifstmt_0085_c9162444869c:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0084_c9162444869c:
-end_ifstmt_0076_c9162444869c:
+end_ifstmt_0084_dfce99dcd0d8:
+end_ifstmt_0076_dfce99dcd0d8:
         loadl   r2,#1               ; int
         push    r2                  
         mover   r4,0,-5             ; load manc (id node)
@@ -448,8 +448,8 @@ end_ifstmt_0076_c9162444869c:
         alu     r3,r2,r3            ; assign long
         load    r4,#-20             
         storl   r3,frame,r4         ; assign byte/long to auto location
-        bra     end_ifstmt_0071_c9162444869c
-else_ifstmt_0072_c9162444869c:
+        bra     end_ifstmt_0071_dfce99dcd0d8
+else_ifstmt_0072_dfce99dcd0d8:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(>)
         mover   r4,0,-1             ; load expb (id node)
@@ -460,7 +460,7 @@ else_ifstmt_0072_c9162444869c:
         setmin  r2                  ; > (reversed operands)
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0096_c9162444869c
+        beq     else_ifstmt_0096_dfce99dcd0d8
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -501,8 +501,8 @@ else_ifstmt_0072_c9162444869c:
         load    r4,#-12             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0095_c9162444869c
-else_ifstmt_0096_c9162444869c:
+        bra     end_ifstmt_0095_dfce99dcd0d8
+else_ifstmt_0096_dfce99dcd0d8:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(<)
         mover   r4,0,-1             ; load expb (id node)
@@ -513,7 +513,7 @@ else_ifstmt_0096_c9162444869c:
         setmin  r2                  ; <
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0104_c9162444869c
+        beq     else_ifstmt_0104_dfce99dcd0d8
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         load    r13,#alu_sub        ; unary -
@@ -555,8 +555,8 @@ else_ifstmt_0096_c9162444869c:
         load    r4,#-12             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0103_c9162444869c
-else_ifstmt_0104_c9162444869c:
+        bra     end_ifstmt_0103_dfce99dcd0d8
+else_ifstmt_0104_dfce99dcd0d8:
         move    r2,r6,0             ; load mana
         push    r2                  ; binop(-)
         mover   r4,0,-2             ; load manb (id node)
@@ -589,12 +589,12 @@ else_ifstmt_0104_c9162444869c:
         setmin  r2                  ; > (reversed operands)
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_condop_0115_c9162444869c
+        beq     else_condop_0115_dfce99dcd0d8
         move    r2,r8,0             ; load signa
-        bra     end_condop_0114_c9162444869c
-else_condop_0115_c9162444869c:
+        bra     end_condop_0114_dfce99dcd0d8
+else_condop_0115_dfce99dcd0d8:
         move    r2,r5,0             ; load signb
-end_condop_0114_c9162444869c:
+end_condop_0114_dfce99dcd0d8:
         push    r2                  
         mover   r4,0,-3             ; load signc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
@@ -602,14 +602,14 @@ end_condop_0114_c9162444869c:
         load    r4,#-12             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0103_c9162444869c:
-end_ifstmt_0095_c9162444869c:
+end_ifstmt_0103_dfce99dcd0d8:
+end_ifstmt_0095_dfce99dcd0d8:
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     else_ifstmt_0117_c9162444869c
+        beq     else_ifstmt_0117_dfce99dcd0d8
         loadl   r2,#0               ; int
         push    r2                  
         mover   r4,0,-3             ; load signc (id node)
@@ -626,8 +626,8 @@ end_ifstmt_0095_c9162444869c:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0116_c9162444869c
-else_ifstmt_0117_c9162444869c:
+        bra     end_ifstmt_0116_dfce99dcd0d8
+else_ifstmt_0117_dfce99dcd0d8:
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(&)
@@ -638,7 +638,7 @@ else_ifstmt_0117_c9162444869c:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0121_c9162444869c
+        beq     end_ifstmt_0121_dfce99dcd0d8
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -674,9 +674,9 @@ else_ifstmt_0117_c9162444869c:
         alu     r3,r2,r3            ; assign long
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
-end_ifstmt_0121_c9162444869c:
-end_ifstmt_0116_c9162444869c:
-end_ifstmt_0071_c9162444869c:
+end_ifstmt_0121_dfce99dcd0d8:
+end_ifstmt_0116_dfce99dcd0d8:
+end_ifstmt_0071_dfce99dcd0d8:
         mover   r4,0,-3             ; load signc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(|)
@@ -701,8 +701,8 @@ end_ifstmt_0071_c9162444869c:
         pop     r3                  ; binop(|)
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
-        bra     return_0034_c9162444869c
-return_0034_c9162444869c:
+        bra     return_0034_dfce99dcd0d8
+return_0034_dfce99dcd0d8:
         pop     r10                 
         pop     r9                  
         pop     r8                  
