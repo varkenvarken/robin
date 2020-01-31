@@ -182,6 +182,7 @@ class Visitor(c_ast.NodeVisitor):
         print("\n".join([self.codeformat(self.visit(item).code) for item in node.ext]))
 
     def visit_FuncDef(self, node):
+        global scope
         scope = 1
 
         self.continue_target = None
@@ -759,7 +760,16 @@ class Visitor(c_ast.NodeVisitor):
                 else:
                     result.append(";Constant of type %s ignored in file scope"%node.type)
             else:
-                result.append(";Constant of type %s ignored in function scope"%node.type)
+                if node.type == 'string':
+                    start = self.globalutils.label("string")
+                    end = self.globalutils.label("endstring")
+                    result.append('\tbra\t' + end)
+                    result.append(start + ':')
+                    result.append('\tbyte0\t%s'%node.value)
+                    result.append(end + ':')
+                    result.append('\tloadl\tr2,#' + start)
+                else:
+                    result.append(";Constant of type %s ignored in function scope"%node.type)
         return value(False, size, "\n".join(result))
         
     def visit_Return(self, node):  # TODO: should check that type matches return value of function
