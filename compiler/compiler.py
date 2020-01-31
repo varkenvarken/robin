@@ -225,10 +225,10 @@ class Visitor(c_ast.NodeVisitor):
         if nvars > 7:
             offset = nvars * 4;
             if offset > 127:
-                postamble.append('\tloadl\tr2,#%d\t; remove space for %d auto variables'%(offset,nvars))
+                postamble.append('\tloadl\tr3,#%d\t; remove space for %d auto variables'%(offset,nvars))
             else:
-                postamble.append('\tload\tr2,#%d\t; remove space for %d auto variables'%(offset,nvars))
-            postamble.append('\tmove\tsp,sp,r2\t; remove space for %d auto variables'%(nvars))
+                postamble.append('\tload\tr3,#%d\t; remove space for %d auto variables'%(offset,nvars))
+            postamble.append('\tmove\tsp,sp,r3\t; remove space for %d auto variables'%(nvars))
         elif nvars > 0:
             postamble.append('\tmover\tsp,sp,%d\t; remove space for %d auto variables'%(nvars, nvars))
         postamble.extend([
@@ -332,7 +332,7 @@ class Visitor(c_ast.NodeVisitor):
             if type(node.left) == c_ast.ArrayRef and sl.symbol is not None and sl.symbol.alloc:
                 if sl.size == 1 and not sl.ispointer():
                     result.append('\tmove\tr3,0,0\t\t; deref array ref byte binop left')
-                    result.append('\tloadb\tr3,r2,0\t\t; deref array ref byte binop left')
+                    result.append('\tload\tr3,r2,0\t\t; deref array ref byte binop left')
                     result.append('\tmove\tr2,r3,0\t\t; deref array ref byte binop left')
                 else:
                     result.append('\tloadl\tr2,r2,0\t\t; deref array ref long binop left')
@@ -347,6 +347,7 @@ class Visitor(c_ast.NodeVisitor):
                 result.append('\tbne\t%s'%endlabel)
             result.append("\tpush\tr2\t\t; binop(%s)"%node.op)
             result.append(sr.code)
+            # TODO add dereferecing code for arrayref to right operand too
             if node.op in {'&&', '||'}:
                 result.append('\ttest\tr2\t\t;')
                 result.append('\tsetne\tr2\t\t; normalize value to be used in bitwise or/and')
@@ -555,7 +556,7 @@ class Visitor(c_ast.NodeVisitor):
                     if type(expr) == c_ast.ArrayRef and v.symbol is not None and v.symbol.alloc:
                         if v.size == 1 and not v.ispointer():
                             result.append('\tmove\tr3,0,0\t\t; deref array ref byte')
-                            result.append('\tloadb\tr3,r2,0\t\t; deref array ref byte')
+                            result.append('\tload\tr3,r2,0\t\t; deref array ref byte')
                             result.append('\tmove\tr2,r3,0\t\t; deref array ref byte')
                         else:
                             result.append('\tloadl\tr2,r2,0\t\t; deref array ref long')
@@ -609,6 +610,13 @@ class Visitor(c_ast.NodeVisitor):
                 if node.init is not None:
                     s = self.visit(node.init)
                     result.append(s.code)
+                    if type(node.init) == c_ast.ArrayRef and s.symbol is not None and s.symbol.alloc:
+                        if s.size == 1 and not s.ispointer():
+                            result.append('\tmove\tr3,0,0\t\t; deref array ref byte assign rvalue')
+                            result.append('\tload\tr3,r2,0\t\t; deref array ref byte assign rvalue')
+                            result.append('\tmove\tr2,r3,0\t\t; deref array ref byte assign rvalue')
+                        else:
+                            result.append('\tloadl\tr2,r2,0\t\t; deref array ref long assign rvalue')
                 else:
                     result.append('\tmove\tr2,0,0\t\t; missing initializer, default to 0')
                 if sym.storage == 'register':
@@ -629,9 +637,13 @@ class Visitor(c_ast.NodeVisitor):
             symbols[node.name] = sym
             if node.init is not None:
                 s = ev.visit(node.init)
+                logger.debug("global init {}",sym)
                 for v in s:
                     if type(v) == int:
-                        result.append("\tlong\t%d"%v)
+                        if sym.size == 1:
+                            result.append("\tbyte\t%d"%v)
+                        else:
+                            result.append("\tlong\t%d"%v)
                     elif type(v) == str:
                         result.append('\tbyte0\t%s'%v)
                     else:
@@ -660,6 +672,16 @@ class Visitor(c_ast.NodeVisitor):
         if node.op == '=' or node.op in supported_ops:
             sr = self.visit(node.rvalue)
             result.append(sr.code)
+
+            if type(node.rvalue) == c_ast.ArrayRef and sr.symbol is not None and sr.symbol.alloc:
+                if sr.size == 1 and not sr.ispointer():
+                    result.append('\tmove\tr3,0,0\t\t; deref array ref byte assign rvalue')
+                    result.append('\tload\tr3,r2,0\t\t; deref array ref byte assign rvalue')
+                    result.append('\tmove\tr2,r3,0\t\t; deref array ref byte assign rvalue')
+                else:
+                    result.append('\tloadl\tr2,r2,0\t\t; deref array ref long assign rvalue')
+
+
             result.append('\tpush\tr2')
             if type(node.lvalue) == c_ast.UnaryOp and node.lvalue.op == '*':
                 sl = self.visit(node.lvalue.expr)
@@ -746,7 +768,7 @@ class Visitor(c_ast.NodeVisitor):
         result.append(s.code)
         if s.symbol is not None and s.symbol.storage == 'global':
             if s.rsize() == 1:
-                result.append('\tloadb\tr2,r2,0\t\t; r2 should be cleared first, not yet implemented')
+                result.append('\tload\tr2,r2,0\t\t; r2 should be cleared first, not yet implemented')
             else:
                 result.append('\tload\tr2,r2,0')
         result.append("\tbra\t"+ symbols["#return#"])
