@@ -85,32 +85,32 @@ _mul_f32_:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0029_7f3431825998
+        beq     end_ifstmt_0029_c912927a6179
         move    r2,r6,0             ; load mana
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0030_7f3431825998
+        beq     end_ifstmt_0030_c912927a6179
         loadl   r2,#0               ; int
-        bra     return_0001_7f3431825998
-end_ifstmt_0030_7f3431825998:
-end_ifstmt_0029_7f3431825998:
+        bra     return_0001_c912927a6179
+end_ifstmt_0030_c912927a6179:
+end_ifstmt_0029_c912927a6179:
         mover   r4,0,-1             ; load expb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0031_7f3431825998
+        beq     end_ifstmt_0031_c912927a6179
         mover   r4,0,-2             ; load manb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0032_7f3431825998
+        beq     end_ifstmt_0032_c912927a6179
         loadl   r2,#0               ; int
-        bra     return_0001_7f3431825998
-end_ifstmt_0032_7f3431825998:
-end_ifstmt_0031_7f3431825998:
+        bra     return_0001_c912927a6179
+end_ifstmt_0032_c912927a6179:
+end_ifstmt_0031_c912927a6179:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(+)
         mover   r4,0,-1             ; load expb (id node)
@@ -201,8 +201,8 @@ end_ifstmt_0031_7f3431825998:
         pop     r3                  ; binop(|)
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
-        bra     return_0001_7f3431825998
-return_0001_7f3431825998:
+        bra     return_0001_c912927a6179
+return_0001_c912927a6179:
         pop     r10                 
         pop     r9                  
         pop     r8                  
