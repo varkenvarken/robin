@@ -3,11 +3,17 @@ COMPILER = python3 ../../compiler/compiler.py
 ASSEMBLER = ../../assembler.py
 MONITOR = $(DIR)/monitor.py
 
-OUTPUT = $(TEST)/test_mul_f32.bin $(TEST)/test_leadingzeros.bin
+OUTPUT = $(TEST)/test_mul_f32.bin $(TEST)/test_leadingzeros.bin $(TEST)/test_add_f32.bin
 
 MACROS = ../../lib.S
 
 STDLIB = ../stdlib
+STRING = ../string
+STDIO  = ../stdio
+
+STDLIB_A = $(STDLIB)/ftoa.s $(STDLIB)/mulu32_64_shift.s $(STDLIB)/itoa.s
+STRING_A = $(STRING)/strreverse.s $(STRING)/strlen.s $(STRING)/strchr.s
+STDIO_A  = $(STDIO)/putchar.s $(STDIO)/print.s
 
 TEST = Test
 
@@ -21,7 +27,10 @@ $(sfiles):%.s: %.c
 $(TEST)/test_mul_f32.bin: $(MACROS) $(TEST)/test_mul_f32.s $(STDLIB)/mulu32_64_shift.s mul_f32.s
 	$(ASSEMBLER) $^ > $@
 
-$(TEST)/test_leadingzeros.bin: $(MACROS) $(TEST)/test_leadingzeros.s add_f32.s
+$(TEST)/test_add_f32.bin: $(MACROS) $(TEST)/test_add_f32.s add_f32.s $(STDLIB_A) $(STRING_A) $(STDIO_A)
+	$(ASSEMBLER) $^ > $@
+
+$(TEST)/test_leadingzeros.bin: $(MACROS) $(TEST)/test_leadingzeros.s add_f32.s $(STDLIB_A) $(STRING_A) $(STDIO_A)
 	$(ASSEMBLER) $^ > $@
 
 clean:

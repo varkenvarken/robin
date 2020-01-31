@@ -29,3 +29,4 @@
 /libc/stdlib/Test/test_itoa.bin
 /libc/stdlib/Test/test_mulu32_64_shift.bin
 /libc/float/Test/test_leadingzeros.bin
+/libc/float/Test/test_add_f32.bin

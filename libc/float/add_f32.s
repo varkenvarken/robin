@@ -54,7 +54,7 @@ lz8:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0008_dfce99dcd0d8
+        beq     end_ifstmt_0008_12f90c3ccccc
         loadl   r2,#n               ; load adddress of global symbol
         push    r2                  
         move    r2,r10,0            ; load a
@@ -74,10 +74,10 @@ lz8:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0008_dfce99dcd0d8:
+end_ifstmt_0008_12f90c3ccccc:
         move    r2,r9,0             ; load c
-        bra     return_0001_dfce99dcd0d8
-return_0001_dfce99dcd0d8:
+        bra     return_0001_12f90c3ccccc
+return_0001_12f90c3ccccc:
         pop     r10                 
         pop     r9                  
         pop     frame               ; old framepointer
@@ -114,7 +114,7 @@ leadingzeros:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0019_dfce99dcd0d8
+        beq     end_ifstmt_0019_12f90c3ccccc
         move    r2,r10,0            ; load a
         push    r2                  ; binop(>>)
         loadl   r2,#16              ; int
@@ -133,7 +133,7 @@ leadingzeros:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0019_dfce99dcd0d8:
+end_ifstmt_0019_12f90c3ccccc:
         move    r2,r9,0             ; load n
         push    r2                  ; binop(==)
         loadl   r2,#16              ; int
@@ -143,7 +143,7 @@ end_ifstmt_0019_dfce99dcd0d8:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0026_dfce99dcd0d8
+        beq     end_ifstmt_0026_12f90c3ccccc
         move    r2,r10,0            ; load a
         push    r2                  ; binop(>>)
         loadl   r2,#8               ; int
@@ -162,7 +162,7 @@ end_ifstmt_0019_dfce99dcd0d8:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0026_dfce99dcd0d8:
+end_ifstmt_0026_12f90c3ccccc:
         move    r2,r9,0             ; load n
         push    r2                  ; binop(==)
         loadl   r2,#24              ; int
@@ -172,7 +172,7 @@ end_ifstmt_0026_dfce99dcd0d8:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0033_dfce99dcd0d8
+        beq     end_ifstmt_0033_12f90c3ccccc
         move    r2,r10,0            ; load a
         push    r2                  
         push    link                
@@ -186,21 +186,26 @@ end_ifstmt_0026_dfce99dcd0d8:
         load    aluop,#alu_add      ; +=
         alu     r9,r9,r3            ; assign long
         move    r2,r9,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0033_dfce99dcd0d8:
+end_ifstmt_0033_12f90c3ccccc:
         move    r2,r9,0             ; load n
-        bra     return_0012_dfce99dcd0d8
-return_0012_dfce99dcd0d8:
+        bra     return_0012_12f90c3ccccc
+return_0012_12f90c3ccccc:
         pop     r10                 
         pop     r9                  
         pop     frame               ; old framepointer
         return 
 ;}
-;{ _add_f32_:add_f32.c:18:7
+
+
+
+buffer:
+        byte    "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+;{ _add_f32_:add_f32.c:24:7
 _add_f32_:
         push    frame               ; old frame pointer
         move    frame,sp,0          ; new frame pointer
         move    r4,0,0              ; zero out index
-        mover   sp,sp,-6            ; add space for 6 auto variables
+        mover   sp,sp,-7            ; add space for 7 auto variables
         push    r5                  
         push    r6                  
         push    r7                  
@@ -285,6 +290,63 @@ _add_f32_:
         move    r2,0,0              ; missing initializer, default to 0
         mover   r4,0,-5             ; load manc (id node)
         storl   r2,frame,r4         
+        move    r2,0,0              ; missing initializer, default to 0
+        mover   r4,0,-6             ; load shift (id node)
+        storl   r2,frame,r4         
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        move    r2,r10,0            ; load a
+        push    r2                  
+        push    link                
+        loadl   r2,#ftoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0066_12f90c3ccccc
+string_0065_12f90c3ccccc:
+        byte0   "    "              
+endstring_0066_12f90c3ccccc:
+        loadl   r2,#string_0065_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        move    r2,r9,0             ; load b
+        push    r2                  
+        push    link                
+        loadl   r2,#ftoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0068_12f90c3ccccc
+string_0067_12f90c3ccccc:
+        byte0   "\n"                
+endstring_0068_12f90c3ccccc:
+        loadl   r2,#string_0067_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
         move    r2,r6,0             ; load mana
         push    r2                  ; binop(|)
         loadl   r2,#0x00800000      ; int
@@ -315,7 +377,7 @@ _add_f32_:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     else_ifstmt_0072_dfce99dcd0d8
+        beq     else_ifstmt_0076_12f90c3ccccc
         move    r2,r8,0             ; load signa
         push    r2                  
         mover   r4,0,-3             ; load signc (id node)
@@ -334,7 +396,7 @@ _add_f32_:
         setmin  r2                  ; > (reversed operands)
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0077_dfce99dcd0d8
+        beq     else_ifstmt_0081_12f90c3ccccc
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -345,20 +407,6 @@ _add_f32_:
         alu     r3,r2,r3            ; assign long
         load    r4,#-8              
         storl   r3,frame,r4         ; assign byte/long to auto location
-        move    r2,r6,0             ; load mana
-        push    r2                  ; binop(+)
-        mover   r4,0,-2             ; load manb (id node)
-        loadl   r2,frame,r4         ; load value of auto variable
-        pop     r3                  ; binop(+)
-        load    flags,#alu_add      ; binop(+)
-        alu     r2,r3,r2            
-        push    r2                  
-        mover   r4,0,-5             ; load manc (id node)
-        loadl   r2,frame,r4         ; load value of auto variable
-        pop     r3                  
-        load    r4,#-20             
-        storl   r3,frame,r4         ; assign byte/long to auto location
-        move    r2,r3,0             ; result of assignment is rvalue to be reused
         move    r2,r7,0             ; load expa
         push    r2                  
         mover   r4,0,-4             ; load expc (id node)
@@ -367,8 +415,8 @@ _add_f32_:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0076_dfce99dcd0d8
-else_ifstmt_0077_dfce99dcd0d8:
+        bra     end_ifstmt_0080_12f90c3ccccc
+else_ifstmt_0081_12f90c3ccccc:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(<)
         mover   r4,0,-1             ; load expb (id node)
@@ -379,7 +427,7 @@ else_ifstmt_0077_dfce99dcd0d8:
         setmin  r2                  ; <
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0085_dfce99dcd0d8
+        beq     else_ifstmt_0086_12f90c3ccccc
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         load    r13,#alu_sub        ; unary -
@@ -390,20 +438,6 @@ else_ifstmt_0077_dfce99dcd0d8:
         load    aluop,#alu_shiftr   ; >>=
         alu     r6,r6,r3            ; assign long
         move    r2,r6,0             ; result of assignment is rvalue to be reused
-        move    r2,r6,0             ; load mana
-        push    r2                  ; binop(+)
-        mover   r4,0,-2             ; load manb (id node)
-        loadl   r2,frame,r4         ; load value of auto variable
-        pop     r3                  ; binop(+)
-        load    flags,#alu_add      ; binop(+)
-        alu     r2,r3,r2            
-        push    r2                  
-        mover   r4,0,-5             ; load manc (id node)
-        loadl   r2,frame,r4         ; load value of auto variable
-        pop     r3                  
-        load    r4,#-20             
-        storl   r3,frame,r4         ; assign byte/long to auto location
-        move    r2,r3,0             ; result of assignment is rvalue to be reused
         mover   r4,0,-1             ; load expb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -413,8 +447,18 @@ else_ifstmt_0077_dfce99dcd0d8:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0084_dfce99dcd0d8
-else_ifstmt_0085_dfce99dcd0d8:
+        bra     end_ifstmt_0085_12f90c3ccccc
+else_ifstmt_0086_12f90c3ccccc:
+        move    r2,r7,0             ; load expa
+        push    r2                  
+        mover   r4,0,-4             ; load expc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        pop     r3                  
+        load    r4,#-16             
+        storl   r3,frame,r4         ; assign byte/long to auto location
+        move    r2,r3,0             ; result of assignment is rvalue to be reused
+end_ifstmt_0085_12f90c3ccccc:
+end_ifstmt_0080_12f90c3ccccc:
         move    r2,r6,0             ; load mana
         push    r2                  ; binop(+)
         mover   r4,0,-2             ; load manb (id node)
@@ -429,17 +473,32 @@ else_ifstmt_0085_dfce99dcd0d8:
         load    r4,#-20             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        move    r2,r7,0             ; load expa
+        loadl   r2,#8               ; int
+        push    r2                  ; binop(-)
+        mover   r4,0,-5             ; load manc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
-        mover   r4,0,-4             ; load expc (id node)
+        push    link                
+        loadl   r2,#leadingzeros    ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        pop     r3                  ; binop(-)
+        load    flags,#alu_sub      ; binop(-)
+        alu     r2,r3,r2            
+        push    r2                  
+        mover   r4,0,-6             ; load shift (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         pop     r3                  
-        load    r4,#-16             
+        load    r4,#-24             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0084_dfce99dcd0d8:
-end_ifstmt_0076_dfce99dcd0d8:
-        loadl   r2,#1               ; int
+        mover   r4,0,-6             ; load shift (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        test    r2                  
+        beq     end_ifstmt_0093_12f90c3ccccc
+        mover   r4,0,-6             ; load shift (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
@@ -448,8 +507,19 @@ end_ifstmt_0076_dfce99dcd0d8:
         alu     r3,r2,r3            ; assign long
         load    r4,#-20             
         storl   r3,frame,r4         ; assign byte/long to auto location
-        bra     end_ifstmt_0071_dfce99dcd0d8
-else_ifstmt_0072_dfce99dcd0d8:
+end_ifstmt_0093_12f90c3ccccc:
+        mover   r4,0,-6             ; load shift (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        push    r2                  
+        mover   r4,0,-4             ; load expc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        pop     r3                  
+        load    aluop,#alu_add      ; +=
+        alu     r3,r2,r3            ; assign long
+        load    r4,#-16             
+        storl   r3,frame,r4         ; assign byte/long to auto location
+        bra     end_ifstmt_0075_12f90c3ccccc
+else_ifstmt_0076_12f90c3ccccc:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(>)
         mover   r4,0,-1             ; load expb (id node)
@@ -460,14 +530,14 @@ else_ifstmt_0072_dfce99dcd0d8:
         setmin  r2                  ; > (reversed operands)
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0096_dfce99dcd0d8
+        beq     else_ifstmt_0098_12f90c3ccccc
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
         mover   r4,0,-2             ; load manb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         pop     r3                  
-        load    aluop,#alu_shiftl   ; <<=
+        load    aluop,#alu_shiftr   ; >>=
         alu     r3,r2,r3            ; assign long
         load    r4,#-8              
         storl   r3,frame,r4         ; assign byte/long to auto location
@@ -501,8 +571,8 @@ else_ifstmt_0072_dfce99dcd0d8:
         load    r4,#-12             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0095_dfce99dcd0d8
-else_ifstmt_0096_dfce99dcd0d8:
+        bra     end_ifstmt_0097_12f90c3ccccc
+else_ifstmt_0098_12f90c3ccccc:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(<)
         mover   r4,0,-1             ; load expb (id node)
@@ -513,7 +583,34 @@ else_ifstmt_0096_dfce99dcd0d8:
         setmin  r2                  ; <
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_ifstmt_0104_dfce99dcd0d8
+        beq     else_ifstmt_0106_12f90c3ccccc
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        move    r2,r6,0             ; load mana
+        push    r2                  
+        push    link                
+        loadl   r2,#itoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0108_12f90c3ccccc
+string_0107_12f90c3ccccc:
+        byte0   "  "                
+endstring_0108_12f90c3ccccc:
+        loadl   r2,#string_0107_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
         mover   r4,0,-4             ; load expc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         load    r13,#alu_sub        ; unary -
@@ -521,13 +618,13 @@ else_ifstmt_0096_dfce99dcd0d8:
         push    r2                  
         move    r2,r6,0             ; load mana
         pop     r3                  
-        load    aluop,#alu_shiftl   ; <<=
+        load    aluop,#alu_shiftr   ; >>=
         alu     r6,r6,r3            ; assign long
         move    r2,r6,0             ; result of assignment is rvalue to be reused
-        move    r2,r6,0             ; load mana
-        push    r2                  ; binop(-)
         mover   r4,0,-2             ; load manb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
+        push    r2                  ; binop(-)
+        move    r2,r6,0             ; load mana
         pop     r3                  ; binop(-)
         load    flags,#alu_sub      ; binop(-)
         alu     r2,r3,r2            
@@ -555,8 +652,91 @@ else_ifstmt_0096_dfce99dcd0d8:
         load    r4,#-12             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0103_dfce99dcd0d8
-else_ifstmt_0104_dfce99dcd0d8:
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        move    r2,r6,0             ; load mana
+        push    r2                  
+        push    link                
+        loadl   r2,#itoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0113_12f90c3ccccc
+string_0112_12f90c3ccccc:
+        byte0   "  "                
+endstring_0113_12f90c3ccccc:
+        loadl   r2,#string_0112_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        mover   r4,0,-2             ; load manb (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        push    r2                  
+        push    link                
+        loadl   r2,#itoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0115_12f90c3ccccc
+string_0114_12f90c3ccccc:
+        byte0   "  "                
+endstring_0115_12f90c3ccccc:
+        loadl   r2,#string_0114_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        mover   r4,0,-5             ; load manc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        push    r2                  
+        push    link                
+        loadl   r2,#itoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0117_12f90c3ccccc
+string_0116_12f90c3ccccc:
+        byte0   "\n"                
+endstring_0117_12f90c3ccccc:
+        loadl   r2,#string_0116_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     end_ifstmt_0105_12f90c3ccccc
+else_ifstmt_0106_12f90c3ccccc:
         move    r2,r6,0             ; load mana
         push    r2                  ; binop(-)
         mover   r4,0,-2             ; load manb (id node)
@@ -589,12 +769,12 @@ else_ifstmt_0104_dfce99dcd0d8:
         setmin  r2                  ; > (reversed operands)
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     else_condop_0115_dfce99dcd0d8
+        beq     else_condop_0125_12f90c3ccccc
         move    r2,r8,0             ; load signa
-        bra     end_condop_0114_dfce99dcd0d8
-else_condop_0115_dfce99dcd0d8:
+        bra     end_condop_0124_12f90c3ccccc
+else_condop_0125_12f90c3ccccc:
         move    r2,r5,0             ; load signb
-end_condop_0114_dfce99dcd0d8:
+end_condop_0124_12f90c3ccccc:
         push    r2                  
         mover   r4,0,-3             ; load signc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
@@ -602,14 +782,14 @@ end_condop_0114_dfce99dcd0d8:
         load    r4,#-12             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-end_ifstmt_0103_dfce99dcd0d8:
-end_ifstmt_0095_dfce99dcd0d8:
+end_ifstmt_0105_12f90c3ccccc:
+end_ifstmt_0097_12f90c3ccccc:
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     else_ifstmt_0117_dfce99dcd0d8
+        beq     else_ifstmt_0127_12f90c3ccccc
         loadl   r2,#0               ; int
         push    r2                  
         mover   r4,0,-3             ; load signc (id node)
@@ -626,8 +806,8 @@ end_ifstmt_0095_dfce99dcd0d8:
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
         move    r2,r3,0             ; result of assignment is rvalue to be reused
-        bra     end_ifstmt_0116_dfce99dcd0d8
-else_ifstmt_0117_dfce99dcd0d8:
+        bra     end_ifstmt_0126_12f90c3ccccc
+else_ifstmt_0127_12f90c3ccccc:
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(&)
@@ -638,7 +818,7 @@ else_ifstmt_0117_dfce99dcd0d8:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0121_dfce99dcd0d8
+        beq     end_ifstmt_0131_12f90c3ccccc
         mover   r4,0,-5             ; load manc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -652,8 +832,13 @@ else_ifstmt_0117_dfce99dcd0d8:
         pop     r3                  ; binop(-)
         load    flags,#alu_sub      ; binop(-)
         alu     r2,r3,r2            
+        push    r2                  
         mover   r4,0,-6             ; load shift (id node)
-        storl   r2,frame,r4         
+        loadl   r2,frame,r4         ; load value of auto variable
+        pop     r3                  
+        load    r4,#-24             
+        storl   r3,frame,r4         ; assign byte/long to auto location
+        move    r2,r3,0             ; result of assignment is rvalue to be reused
         mover   r4,0,-6             ; load shift (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  
@@ -674,9 +859,9 @@ else_ifstmt_0117_dfce99dcd0d8:
         alu     r3,r2,r3            ; assign long
         load    r4,#-16             
         storl   r3,frame,r4         ; assign byte/long to auto location
-end_ifstmt_0121_dfce99dcd0d8:
-end_ifstmt_0116_dfce99dcd0d8:
-end_ifstmt_0071_dfce99dcd0d8:
+end_ifstmt_0131_12f90c3ccccc:
+end_ifstmt_0126_12f90c3ccccc:
+end_ifstmt_0075_12f90c3ccccc:
         mover   r4,0,-3             ; load signc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(|)
@@ -701,15 +886,47 @@ end_ifstmt_0071_dfce99dcd0d8:
         pop     r3                  ; binop(|)
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
-        bra     return_0034_dfce99dcd0d8
-return_0034_dfce99dcd0d8:
+        mover   r4,0,-7             ; load result (id node)
+        storl   r2,frame,r4         
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        mover   r4,0,-7             ; load result (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        push    r2                  
+        push    link                
+        loadl   r2,#ftoa            ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,2             
+        loadl   r2,#buffer          ; load adddress of global symbol
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        bra     endstring_0148_12f90c3ccccc
+string_0147_12f90c3ccccc:
+        byte0   "\n"                
+endstring_0148_12f90c3ccccc:
+        loadl   r2,#string_0147_12f90c3ccccc
+        push    r2                  
+        push    link                
+        loadl   r2,#print           ; load adddress of global symbol
+        jal     link,r2,0           
+        pop     link                
+        mover   sp,sp,1             
+        mover   r4,0,-7             ; load result (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        bra     return_0034_12f90c3ccccc
+return_0034_12f90c3ccccc:
         pop     r10                 
         pop     r9                  
         pop     r8                  
         pop     r7                  
         pop     r6                  
         pop     r5                  
-        mover   sp,sp,6             ; remove space for 6 auto variables
+        mover   sp,sp,7             ; remove space for 7 auto variables
         pop     frame               ; old framepointer
         return 
 ;}
