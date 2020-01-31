@@ -79,5 +79,5 @@
 
 #define stackdef
 stackbottom:
-stack: 256*int((stackbottom + 256 + 256)/256)	; grows downward. size = 256 bytes. address round upward to next 256 multiple
+stack: 256*(stackbottom//256 + 2)	; grows downward. size = 256 bytes. address round upward to next 256 multiple
 #end
