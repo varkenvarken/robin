@@ -34,6 +34,8 @@ import sys
 # MARK  R2           register
 # MOVER R2,R1,idx    regsidx
 
+functions = {'__builtins__':{}}  # we could fill this with additional python symbols for evaluation but we do not want labels to clash with python internal names
+
 class Opcode:
 	def __init__(self, name, desc='',
 			registers=None, register=None, regsidx=None, implied=None, immediate=None, longimmediate=None, relative=None, 
@@ -70,7 +72,7 @@ class Opcode:
 				immediate = True
 				values[1] = values[1][1:]
 			#print(values, file=sys.stderr)
-			values = [eval(op,globals(),labels) for op in values]
+			values = [eval(op,functions,labels) for op in values]
 			#print(["%x"%v for v in values], file=sys.stderr)
 		if immediate:
 			if self.immediate is None and self.longimmediate is None: raise NotImplementedError("%s does not support an immediate mode"%self.name)
@@ -183,7 +185,7 @@ class Opcode:
 	def length(self, operand, labels, addr, changed):
 		if self.data:
 			if operand.strip().startswith('"') or operand.strip().startswith('\''):
-				nvalues = len(bytes(eval(operand),encoding='UTF-8'))
+				nvalues = len(bytes(eval(operand,functions),encoding='UTF-8'))
 			else:
 				nvalues = len(operand.split(','))
 			if self.addzero:
@@ -201,7 +203,7 @@ class Opcode:
 				if len(values) > 1 and values[1].startswith('#'):
 					values[1] = values[1][1:]
 					try:  # could also fail on a forward label reference in which case we assume an address ref and therefore a long
-						values = [eval(op,globals(),labels) for op in values]
+						values = [eval(op,functions,labels) for op in values]
 						v = self.bytevalue_int(values[1])
 						if not self.immediate : # this implies only a longimmediate, like on LOADL
 							opl = 6
@@ -351,7 +353,7 @@ def assemble(lines, debug=False):
 							labels[label]=addr  # implicit label definition
 						else:
 							try:
-								addr=eval(operand,globals(),labels)
+								addr=eval(operand,functions,labels)
 								labels[label]=addr  # explicit label definition
 							except:  #ignore undefined in the first pass
 								pass
@@ -427,7 +429,7 @@ def assemble(lines, debug=False):
 				labels[label]=addr  # implicit label definition
 			else:
 				try:
-					newaddr=eval(operand,globals(),labels)
+					newaddr=eval(operand,functions,labels)
 					labels[label]=newaddr  # explicit label definition
 				except Exception as e:
 					print("Error: %s[%d] syntax error %s"%(filename, linenumber, operand), file=sys.stderr)
