@@ -64,8 +64,12 @@ class symbol:
                 self.pointerdepth += 1
                 stype = stype.type
 
-            self.type = stype.type.names[0]
-            self.size = 1 if self.type == 'char' else 4
+            if type(stype.type) == c_ast.Union:
+                self.type = 'union'
+                self.size = 4  # bluntly assume union is never larger than 4 byte
+            else:
+                self.type = stype.type.names[0]
+                self.size = 1 if self.type == 'char' else 4
 
             if arrayalloc is not None:
                 ev = ExprVisitor()
@@ -73,7 +77,6 @@ class symbol:
                 self.allocbytes = int(ev.visit(arrayalloc)[0]) * self.size
 
     def deref(self):
-        logger.debug("{}",self)
         ds = symbol(self.storage, self.location)
         ds.size = self.size
         ds.type = self.type
@@ -116,7 +119,6 @@ class GlobalUtils:
 
     def label(self,prefix):
         self.labelcount += 1
-        #logger.debug("labelcount {}, prefix {} {}",self.labelcount,prefix,self.random)
         return "%s_%04d_%s"%(prefix,self.labelcount,self.random)
 
     def normalize(self, s):
@@ -265,7 +267,6 @@ class Visitor(c_ast.NodeVisitor):
         return value(True, None, "\n".join(preamble + extra_space + movreg + body + postamble))
 
     def visit_ID(self, node):
-        #logger.debug("ID {}",node)
         if node.name in symbols:
             symbol = symbols[node.name]
             if symbol.storage == 'register':
@@ -273,7 +274,6 @@ class Visitor(c_ast.NodeVisitor):
                     '\tmove\tr2,%s,0\t\t; load %s'%(symbol.location,node.name),
                 ]
             elif symbol.storage == 'auto':
-                #logger.debug('Symbol {}',symbol)
                 if symbol.alloc:
                     result = [
                         self.r4index(symbol.location,node.name),
@@ -293,6 +293,27 @@ class Visitor(c_ast.NodeVisitor):
             return value(False, symbol.size, "\n".join(result), symbol)
         else:
             print("Unknown local id %s"%node.name,file=sys.stderr)
+            return value(False, 0, "")
+
+
+    def visit_StructRef(self, node):  # we treat everything as a union of 4 bytes wide, even structs :-)
+        logger.debug(node)
+        if node.name.name in symbols:
+            symbol = symbols[node.name.name]  # we also ignore the ref type (. or ->) as well as the type of the member
+            if symbol.storage == 'auto':
+                result = [
+                        self.r4index(symbol.location,node.name.name),
+                        "\tloadl\tr2,frame,r4\t\t; load value of auto variable for union"
+                    ]
+            elif symbol.storage == 'global':
+                result = [
+                    "\tloadl\tr2,#%s\t\t; load adddress of global symbol for union"%node.name.name
+                ]
+            else:
+                print('Unexpected symbol storage %s with StructRef %s'%(symbol.storage,node.name.name),file=sys.stderr)
+            return value(False, symbol.size, "\n".join(result), symbol)
+        else:
+            print("Unknown structref %s"%node.name.name,file=sys.stderr)
             return value(False, 0, "")
 
     def isnotzero(self, reg):  # prime candidate for creating a cpu intruction for
@@ -334,7 +355,6 @@ class Visitor(c_ast.NodeVisitor):
             # note that results never need to be widened because internally we always work with 32 bit
             result = [sl.code]
 
-            logger.debug("binop left {}",node.left)
             if type(node.left) == c_ast.ArrayRef and sl.symbol is not None and sl.symbol.alloc:
                 if sl.size == 1 and not sl.ispointer():
                     result.append('\tmove\tr3,0,0\t\t; deref array ref byte binop left')
@@ -373,14 +393,12 @@ class Visitor(c_ast.NodeVisitor):
             # lvalue is converted to rvalue unless just the left hand side is a pointer
             rvalue = True
             if sl.ispointer() and not sr.ispointer(): rvalue = False
-            logger.debug("{}\n{}",sl,sr)
             return value(rvalue, sl.size, "\n".join(result), sl.symbol)
         else:
             logger.error("Binary op {} ignored",node.op)
             return value(False, 0, "")
 
     def visit_UnaryOp(self, node):
-        logger.debug("{}", node.expr)
         s = self.visit(node.expr)
         result = [s.code]
         isrvalue = s.rvalue
@@ -554,10 +572,8 @@ class Visitor(c_ast.NodeVisitor):
         else:
             sym = symbols[node.name.name]    
             if node.args is not None:
-                logger.debug('args {}',node.args)
                 for expr in reversed(node.args.exprs):
                     v = self.visit(expr)
-                    logger.debug('FUNC CALL {} value {} arg {}',node.name.name,v, expr)
                     result.append(v.code)
                     if type(expr) == c_ast.ArrayRef and v.symbol is not None and v.symbol.alloc:
                         if v.size == 1 and not v.ispointer():
@@ -604,7 +620,13 @@ class Visitor(c_ast.NodeVisitor):
                         result.append('\tloadl\tr2,#%d'%v)
                         result.append('\tloadl\tr3,#%d'%(n * 4))
                         result.append('\tstorl\tr2,frame,r3')
-                        
+            elif type(node.type) == c_ast.TypeDecl and type(node.type.type) == c_ast.Union:
+                logger.debug(node)
+                nauto = symbols["#nauto#"]
+                # We crudely assume all union members are 4 byte wide and no initialization is present
+                name = node.type.declname
+                symbols[name] = symbol('auto', - 1 - nauto, node.type) 
+                symbols["#nauto#"] = nauto + 1
             elif len(registers):
                 symbols[node.name] = symbol('register', registers.pop(),node.type)
             else:
@@ -643,7 +665,6 @@ class Visitor(c_ast.NodeVisitor):
             symbols[node.name] = sym
             if node.init is not None:
                 s = ev.visit(node.init)
-                logger.debug("global init {}",sym)
                 for v in s:
                     if type(v) == int:
                         if sym.size == 1:
@@ -664,6 +685,7 @@ class Visitor(c_ast.NodeVisitor):
             else:
                 result.append('\tlong 0\t\t; missing initializer, default to 0')
         return value(True, sym.size, "\n".join(result))
+
 
     def visit_DeclList(self, node):
         return value(False, 0, "\n".join([self.visit(d).code for d in node.decls]))
@@ -697,6 +719,8 @@ class Visitor(c_ast.NodeVisitor):
             result.append('\tpop\tr3')
             sym = sl.symbol
             if not sl.rvalue:
+                logger.debug(node)
+                logger.debug(sym)
                 if sym.storage == 'register':
                     if node.op in supported_ops:
                         result.append("\tload\taluop,#%s\t\t; %s"%(alu_opmap[node.op],node.op));
@@ -704,7 +728,6 @@ class Visitor(c_ast.NodeVisitor):
                         result.append("\tmove\tr2,%s,0\t\t; result of assignment is rvalue to be reused"%sym.location)
                     else:
                         if sl.ispointer() and not sr.ispointer():
-                            logger.debug("register assignment,reg holds ptr\n{}\n{}",sl,sr)
                             if sl.size == 1:
                                 result.append("\tstor\tr3,r2,0\t; store byte")
                             else:
@@ -902,14 +925,11 @@ class Visitor(c_ast.NodeVisitor):
 def process(filename, globalutils):
     # Note that cpp is used. Provide a path to your own cpp or
     # make sure one exists in PATH.
-    try:
-        ast = parse_file(filename, use_cpp=True,
-                     cpp_args=r'-Iutils/fake_libc_include')
+    ast = parse_file(filename, use_cpp=True,
+                 cpp_args=r'-Iutils/fake_libc_include')
 
-        v = Visitor(globalutils)
-        v.visit(ast)
-    except Exception as e:
-        logger.error('parse error {}',e)
+    v = Visitor(globalutils)
+    v.visit(ast)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
