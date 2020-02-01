@@ -15,12 +15,6 @@ int leadingzeros(int a){
     return n;
 }
 
-extern void print(char *);
-extern void ftoa(float f, char *str);
-extern float itoa(int n, char *str);
-
-char buffer[64];
-
 float _add_f32_(float a, float b){
     // technically we would need a union for now the compiler allows bitwise operations on floats
     int signa = a & 0x80000000;
@@ -92,3 +86,9 @@ float _add_f32_(float a, float b){
 
     return result;
 }
+
+float _sub_f32_(float a, float b){
+    if(b == 0) return a;
+    return _add_f32_(a, b^0x80000000); // flip the sign. note that the compiler allows this for floats for now (it treats b as an int, so -b would be something completely different!)
+}
+
