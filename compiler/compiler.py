@@ -3,7 +3,7 @@ from re import split
 from loguru import logger
 from pycparser import c_parser, c_ast, parse_file
 from uuid import uuid4
-
+from struct import pack,unpack
 from argparse import ArgumentParser
 import sys
 
@@ -119,6 +119,11 @@ class GlobalUtils:
         #logger.debug("labelcount {}, prefix {} {}",self.labelcount,prefix,self.random)
         return "%s_%04d_%s"%(prefix,self.labelcount,self.random)
 
+    def normalize(self, s):
+        if s.endswith('f'):
+            return s[:-1]
+        return s
+            
 # TODO create another visitor that runs first and does constant folding etc.
 
 class ExprVisitor(c_ast.NodeVisitor):
@@ -753,23 +758,22 @@ class Visitor(c_ast.NodeVisitor):
         elif node.type == 'char':
             result.append("\tloadl\tr2,#%s\t\t; char, but loaded as int"%node.value)
             size = 1
+        elif node.type == 'string':
+            if scope == 0:  # file scope
+                result.append('\tbyte0\t%s'%node.value)
+            else:  # nasty implementation of string in function scope: just plonk it in an jump over it 
+                start = self.globalutils.label("string")
+                end = self.globalutils.label("endstring")
+                result.append('\tbra\t' + end)
+                result.append(start + ':')
+                result.append('\tbyte0\t%s'%node.value)
+                result.append(end + ':')
+                result.append('\tloadl\tr2,#' + start)
+        elif node.type == 'float':
+            nodevalue = "".join("%02x"%b for b in pack('>f',float(self.globalutils.normalize(node.value))))
+            result.append('\tloadl\tr2,#0x%s\t\t; float: %s'%(nodevalue, node.value))
         else:
-            if scope == 0:
-                if node.type == 'string':
-                    result.append('\tbyte0\t%s'%node.value)
-                else:
-                    result.append(";Constant of type %s ignored in file scope"%node.type)
-            else:
-                if node.type == 'string':
-                    start = self.globalutils.label("string")
-                    end = self.globalutils.label("endstring")
-                    result.append('\tbra\t' + end)
-                    result.append(start + ':')
-                    result.append('\tbyte0\t%s'%node.value)
-                    result.append(end + ':')
-                    result.append('\tloadl\tr2,#' + start)
-                else:
-                    result.append(";Constant of type %s ignored in function scope"%node.type)
+            result.append(";Constant of type %s ignored"%node.type)
         return value(False, size, "\n".join(result))
         
     def visit_Return(self, node):  # TODO: should check that type matches return value of function
