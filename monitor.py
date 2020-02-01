@@ -751,6 +751,10 @@ class Monitor(cmd.Cmd):
 		self.ok()
 		return False
 
+	def default(self, line):
+		#print('default', line.strip().startswith('//'))
+		if line.strip().startswith('//'): return False
+		return super().default(line)
 
 	def do_exit(self, line):
 		"""
