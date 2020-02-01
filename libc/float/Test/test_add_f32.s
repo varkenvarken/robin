@@ -30,9 +30,9 @@ test_add_f32_done:
     
 numbers:
     long 0x3f800000 ; 1.0
-    long 0x3f800000 ; 2.0
     long 0x3f800000 ; 1.0
-    long 0x40000000 ; 1.0
+    long 0x3f800000 ; 1.0
+    long 0x40000000 ; 2.0
     long 0x447a0000 ; 1000.0
     long 0x3e99999a ; 0.3
     long 0x3e99999a ; 0.3
@@ -41,7 +41,16 @@ numbers:
     long 0xbe99999a ; -0.3
     long 0xc47a0000 ; -1000.0
     long 0x3e99999a ; 0.3
+    long 0x447a0000 ; 1000.0
+    long 0x00000000 ; 0.0
+    long 0x00000000 ; 0.0
+    long 0x447a0000 ; 1000.0
+    long 0xbe99999a ; -0.3
+    long 0xbe99999a ; -0.3
 results:
+    long 0xffffffff
+    long 0xffffffff
+    long 0xffffffff
     long 0xffffffff
     long 0xffffffff
     long 0xffffffff

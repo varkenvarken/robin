@@ -37,14 +37,9 @@ float _add_f32_(float a, float b){
 
     int shift;
 
-    ftoa(a,buffer);
-    print(buffer);
-    print("    ");
-    ftoa(b,buffer);
-    print(buffer);
-    print("\n");
+    if(!expa) return b;
+    if(!expb) return a;
 
-    // TODO zero handling
     mana = mana | 0x00800000;
     manb = manb | 0x00800000;
 
@@ -71,24 +66,10 @@ float _add_f32_(float a, float b){
             expc = expa;
             signc = signa;
         }else if(expa < expb){
-            itoa(mana,buffer);
-            print(buffer);
-            print("  ");
-            
             mana >>= -expc;
             manc = manb - mana;
             expc = expb;
             signc = signb;
-            
-            itoa(mana,buffer);
-            print(buffer);
-            print("  ");
-            itoa(manb,buffer);
-            print(buffer);
-            print("  ");
-            itoa(manc,buffer);
-            print(buffer);
-            print("\n");
         }else{
             manc = mana - manb;
             expc = expa;
@@ -106,11 +87,8 @@ float _add_f32_(float a, float b){
             }
         }
     }
-    int result = signc | (expc << 23) | (manc & 0x007fffff);
 
-    ftoa(result,buffer);
-    print(buffer);
-    print("\n");
+    int result = signc | (expc << 23) | (manc & 0x007fffff);
 
     return result;
 }
