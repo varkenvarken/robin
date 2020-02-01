@@ -27,7 +27,14 @@ float _mul_f32_(float a, float b){
     mana = mana | 0x00800000;
     manb = manb | 0x00800000;
     // external 32bitx32bit -> 64 bit and then shift right; stor hi,lo in fracpartc
-    _mulu32_64_shift(mana,manb,24,fracpartc);
+    _mulu32_64_shift(mana,manb,23,fracpartc);
+    int manc = fracpartc[1];
+    
     //__halt__();
-    return signc | expc << 23 | (fracpartc[1] & 0x00ffffff);
+
+    if(manc >= 0x01000000){
+        expc += 1;
+        manc >>= 1;
+    }
+    return signc | expc << 23 | (manc & 0x007fffff);
 }

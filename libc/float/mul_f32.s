@@ -4,7 +4,7 @@ _mul_f32_:
         push    frame               ; old frame pointer
         move    frame,sp,0          ; new frame pointer
         move    r4,0,0              ; zero out index
-        mover   sp,sp,-6            ; add space for 6 auto variables
+        mover   sp,sp,-7            ; add space for 7 auto variables
         push    r5                  
         push    r6                  
         push    r7                  
@@ -85,32 +85,32 @@ _mul_f32_:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0029_fdd1f01b9039
+        beq     end_ifstmt_0029_238d29af54b6
         move    r2,r6,0             ; load mana
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0030_fdd1f01b9039
+        beq     end_ifstmt_0030_238d29af54b6
         loadl   r2,#0               ; int
-        bra     return_0001_fdd1f01b9039
-end_ifstmt_0030_fdd1f01b9039:
-end_ifstmt_0029_fdd1f01b9039:
+        bra     return_0001_238d29af54b6
+end_ifstmt_0030_238d29af54b6:
+end_ifstmt_0029_238d29af54b6:
         mover   r4,0,-1             ; load expb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0031_fdd1f01b9039
+        beq     end_ifstmt_0031_238d29af54b6
         mover   r4,0,-2             ; load manb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0032_fdd1f01b9039
+        beq     end_ifstmt_0032_238d29af54b6
         loadl   r2,#0               ; int
-        bra     return_0001_fdd1f01b9039
-end_ifstmt_0032_fdd1f01b9039:
-end_ifstmt_0031_fdd1f01b9039:
+        bra     return_0001_238d29af54b6
+end_ifstmt_0032_238d29af54b6:
+end_ifstmt_0031_238d29af54b6:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(+)
         mover   r4,0,-1             ; load expb (id node)
@@ -158,7 +158,7 @@ end_ifstmt_0031_fdd1f01b9039:
         mover   r4,0,-6             ; load fracpartc (id node)
         move    r2,frame,r4         ; load address of auto allocated array
         push    r2                  
-        loadl   r2,#24              ; int
+        loadl   r2,#23              ; int
         push    r2                  
         mover   r4,0,-2             ; load manb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
@@ -170,6 +170,47 @@ end_ifstmt_0031_fdd1f01b9039:
         jal     link,r2,0           
         pop     link                
         mover   sp,sp,4             
+        mover   r4,0,-6             ; load fracpartc (id node)
+        move    r2,frame,r4         ; load address of auto allocated array
+        push    r2                  
+        loadl   r2,#1               ; int
+        move    r2,r2,r2            ; multiply by 2
+        move    r2,r2,r2            ; multiply by 2
+        pop     r3                  
+        move    r2,r2,r3            ; add index to base address
+        loadl   r2,r2,0             ; deref array ref long assign rvalue
+        mover   r4,0,-7             ; load manc (id node)
+        storl   r2,frame,r4         
+        mover   r4,0,-7             ; load manc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        push    r2                  ; binop(>=)
+        loadl   r2,#0x01000000      ; int
+        pop     r3                  ; binop(>=)
+        load    flags,#alu_cmp      ; binop(>=)
+        alu     r2,r3,r2            
+        setpos  r2                  ; >=
+        test    r2                  ; setxxx does not alter flags
+        test    r2                  
+        beq     end_ifstmt_0048_238d29af54b6
+        loadl   r2,#1               ; int
+        push    r2                  
+        mover   r4,0,-4             ; load expc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        pop     r3                  
+        load    aluop,#alu_add      ; +=
+        alu     r3,r2,r3            ; assign long
+        load    r4,#-16             
+        storl   r3,frame,r4         ; assign byte/long to auto location
+        loadl   r2,#1               ; int
+        push    r2                  
+        mover   r4,0,-7             ; load manc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
+        pop     r3                  
+        load    aluop,#alu_shiftr   ; >>=
+        alu     r3,r2,r3            ; assign long
+        load    r4,#-28             
+        storl   r3,frame,r4         ; assign byte/long to auto location
+end_ifstmt_0048_238d29af54b6:
         mover   r4,0,-3             ; load signc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(|)
@@ -184,32 +225,25 @@ end_ifstmt_0031_fdd1f01b9039:
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
         push    r2                  ; binop(|)
-        mover   r4,0,-6             ; load fracpartc (id node)
-        move    r2,frame,r4         ; load address of auto allocated array
-        push    r2                  
-        loadl   r2,#1               ; int
-        move    r2,r2,r2            ; multiply by 2
-        move    r2,r2,r2            ; multiply by 2
-        pop     r3                  
-        move    r2,r2,r3            ; add index to base address
-        loadl   r2,r2,0             ; deref array ref long binop left
+        mover   r4,0,-7             ; load manc (id node)
+        loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(&)
-        loadl   r2,#0x00ffffff      ; int
+        loadl   r2,#0x007fffff      ; int
         pop     r3                  ; binop(&)
         load    flags,#alu_and      ; binop(&)
         alu     r2,r3,r2            
         pop     r3                  ; binop(|)
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
-        bra     return_0001_fdd1f01b9039
-return_0001_fdd1f01b9039:
+        bra     return_0001_238d29af54b6
+return_0001_238d29af54b6:
         pop     r10                 
         pop     r9                  
         pop     r8                  
         pop     r7                  
         pop     r6                  
         pop     r5                  
-        mover   sp,sp,6             ; remove space for 6 auto variables
+        mover   sp,sp,7             ; remove space for 7 auto variables
         pop     frame               ; old framepointer
         return 
 ;}
