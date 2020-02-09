@@ -37,5 +37,6 @@ flash: $(OUTPUT)
 
 lint:
 	pep8 --max-line-length=127 -qq --statistics --count compiler/compiler.py
+	pep8 --max-line-length=127 -qq --statistics --count assembler.py
 
 .PHONY: all clean flash lint
