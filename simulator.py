@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #  simulator.py   A simulator for the Robin SoC  (c) 2020 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify

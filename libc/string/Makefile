@@ -1,5 +1,7 @@
-COMPILER = python3 ../../compiler/compiler.py
-ASSEMBLER = ../../assembler.py
+PYTHON = python
+COMPILER = $(PYTHON) ../../compiler/compiler.py
+ASSEMBLER = $(PYTHON) ../../assembler.py
+SIMULATOR = $(PYTHON) ../../simulator.py
 
 OUTPUT = test_strlen.bin test_strchr.bin test_strreverse.bin
 
@@ -19,7 +21,10 @@ test_strchr.bin: $(MACROS) test_strchr.s strchr.s
 test_strreverse.bin: $(MACROS) test_strreverse.s strlen.s strreverse.s
 	$(ASSEMBLER) $^ > $@
 
-clean:
-	rm -f *.bin *.hex
+test: $(OUTPUT)
+		$(SIMULATOR) --regs test_strlen.bin | grep 'R02 0000000f ('
 
-.PHONY: all clean
+clean:
+	rm -f *.bin *.hexc strlen.s strreverse.s strchr.s
+
+.PHONY: all clean test
