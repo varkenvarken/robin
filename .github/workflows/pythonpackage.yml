@@ -21,7 +21,3 @@ jobs:
         pip install pep8
         # stop the build if there are Python syntax errors or undefined names
         pep8 --max-line-length=127 -qq --statistics --count compiler/compiler.py
-    - name: Test with pytest
-      run: |
-        pip install pytest
-        pytest
