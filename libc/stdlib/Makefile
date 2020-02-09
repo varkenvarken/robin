@@ -1,7 +1,7 @@
-DIR = /home/michel/fpga/robin
-COMPILER = python3 ../../compiler/compiler.py
-ASSEMBLER = ../../assembler.py
-MONITOR = $(DIR)/monitor.py
+PYTHON = python	
+COMPILER = $(PYTHON) ../../compiler/compiler.py
+ASSEMBLER = $(PYTHON) ../../assembler.py
+SIMULATOR = $(PYTHON) ../../simulator.py
 
 OUTPUT = $(TEST)/test_atof.bin $(TEST)/test_atoi.bin $(TEST)/test_ftoa.bin $(TEST)/test_itoa.bin $(TEST)/test_mulu32_64_shift.bin
 
@@ -34,12 +34,19 @@ $(TEST)/test_mulu32_64_shift.bin: $(MACROS) $(TEST)/test_mulu32_64_shift.s mulu3
 	$(ASSEMBLER) $^ > $@
 
 clean:
-	rm -f *.bin *.hex
+	rm -f *.bin *.hex atoi.s atof.s itoa.s ftoa.s
 
-test:
+test: $(OUTPUT)
+	$(SIMULATOR) --regs $(TEST)/test_mulu32_64_shift.bin | grep 'R03 9502f900 ('
+	$(SIMULATOR) -s 0x410 $(TEST)/test_itoa.bin | grep '"-666"'
+	$(SIMULATOR) --regs $(TEST)/test_atoi.bin | grep 'R02 fffffd66 ('
+	$(SIMULATOR) --regs $(TEST)/test_atof.bin | grep 'R02 c0600000 ('
+	$(SIMULATOR) -s 0x410 $(TEST)/test_ftoa.bin | grep '"-3.5"'
+
+testhard:
 	(cd Test; $(MONITOR) -b115200 -i -x test_all.cmd)
 
-.PHONY: all clean test
+.PHONY: all clean test testhard
 
 
 

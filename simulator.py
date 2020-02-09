@@ -62,22 +62,28 @@ class environment:
       
       broken = False
       
-      while True:
-        self.R[0] = 0
-        self.R[1] = 1
-        self.R[13] |= 0x80000000  # always on bit
+      try:
+          while True:
+            self.R[0] = 0
+            self.R[1] = 1
+            self.R[13] |= 0x80000000  # always on bit
 
-        ip = self.R[15]
-        if breakpoint is not None and ip == breakpoint: broken = True
-        if broken : print(self)
+            ip = self.R[15]
+            if breakpoint is not None and ip == breakpoint:
+                broken = True
+            instruction = (self.mem[ip] << 8) + self.mem[ip+1] 
+            if broken :
+                print("%04x"%instruction, self.mem[1024:1028])
+                print(self)
 
-        instruction = (self.mem[ip] << 8) + self.mem[ip+1] 
-        ip += 2
-        self.R[15] = ip
-        if instruction == 0xffff: break
+            ip += 2
+            self.R[15] = ip
+            if instruction == 0xffff: break
 
-        if broken : input("Press Enter to continue...")
-        self.dispatch(instruction, ip)
+            if broken : input("Press Enter to continue...")
+            self.dispatch(instruction, ip)
+      except (Exception,KeyboardInterrupt) as e:
+          print(e,"ip=%08x"%ip)
 
     def dispatch(self, ins, addr):
       #print("%04x"%ins)
@@ -90,9 +96,19 @@ class environment:
       op = (ins >> 12 ) & 0xf
       getattr(self,'op'+str(op))(r2,r1,r0,addr)
 
+    def signed(self, a):
+        if a & 0x80000000:
+            return -(2**32-a)
+        return a
+
+    def unsigned(self, a):
+        if a < 0:
+            a += 2**32
+        return a & 0xffffffff
+            
     def op0(self,r2,r1,r0,addr):  # move
       #print('move %d,%d,%d'%(r2,r1,r0))
-      self.R[r2] = self.R[r1] + self.R[r0]
+      self.R[r2] = (self.R[r1] + self.R[r0]) & 0xffffffff
 
     def op2(self,r2,r1,r0,addr):  # alu
       aluop = self.R[13]&0xff
@@ -107,7 +123,7 @@ class environment:
         5: lambda x,y,c: x&y,
         6: lambda x,y,c: x^y,
         7: lambda x,y,c: ~x,
-        8: lambda x,y,c: -1 if x<y else( 1 if x>y else 0),
+        8: lambda x,y,c: -1 if self.signed(x)<self.signed(y) else ( 1 if x>y else 0 ),
         9: lambda x,y,c: x,
         12: lambda x,y,c: x << y,
         13: lambda x,y,c: x >> y,
@@ -115,26 +131,30 @@ class environment:
         17: lambda x,y,c: (x * y) & 0xffffffff,
         18: lambda x,y,c: (x * y) >> 32,
         32: lambda x,y,c: x // y,
-        33: lambda x,y,c: x - y * (x // y),
-        34: lambda x,y,c: (-1 if ((x^y)&0x80000000) else 1)*(abs(x) // abs(y)),
+        33: lambda x,y,c: (-1 if ((x^y)&0x80000000) else 1)*(abs(x) // abs(y)),
+        34: lambda x,y,c: x - y * (x // y),
         35: lambda x,y,c: (-1 if ((x^y)&0x80000000) else 1)*(abs(x) - abs(y) * (abs(x) // abs(y))),
       }
-      self.R[r2] = ops[aluop](self.R[r1],self.R[r0], carry)
+      self.R[r2] = self.unsigned(ops[aluop](self.R[r1],self.R[r0], carry))
       self.R[13] &= 0x8fffffff  # clear flags
-      self.R[13] |= 0x40000000 if self.R[r2] < 0 else 0
+      self.R[13] |= 0x40000000 if self.R[r2] & 0x80000000 else 0
       self.R[13] |= 0x20000000 if self.R[r2] == 0 else 0
       # ignore generated carries for now
 
     def op3(self,r2,r1,r0,addr):  # mover
       #print('mover %d,%d,%d'%(r2,r1,r0))
-      self.R[r2] = self.R[r1] + extend32(r0)*4
+      if r0 >= 8:
+        self.R[r2] = self.unsigned((self.R[r1] - (16-r0)*4))
+      else: 
+        self.R[r2] = self.R[r1] + r0*4
 
     def op4(self,r2,r1,r0,addr):  # load
-      #print('load %d,%d,%d'%(r2,r1,r0))
-      self.R[r2] |= self.mem[self.R[r1] + self.R[r0]]  # doesn't touch bits 31-8 in dest register
+      #print('load %d,%d,%d %d,%d  [%d]'%(r2,r1,r0,self.R[r1],self.R[r0],self.mem[self.R[r1] + self.R[r0]]))
+      mi = (self.R[r1] + self.R[r0]) & 0xffffffff
+      self.R[r2] = (self.R[r2] & 0xffffff00) | self.mem[mi]  # doesn't touch bits 31-8 in dest register
 
     def op6(self,r2,r1,r0,addr):  # loadl
-      mi = self.R[r1] + self.R[r0]
+      mi = (self.R[r1] + self.R[r0]) & 0xffffffff
       #print('loadl %d,%d,%d (%d)'%(r2,r1,r0,mi))
       self.R[r2] = (self.mem[mi] << 24) | (self.mem[mi+1] << 16) | (self.mem[mi+2] << 8) | (self.mem[mi+3])
 
@@ -145,14 +165,14 @@ class environment:
 
     def op8(self, r2,r1,r0, addr):  # stor 
       #print('stor %d,%d,%d'%(r2,r1,r0))
-      offset = self.R[r1] + self.R[r0]
+      offset = (self.R[r1] + self.R[r0]) & 0xffffffff
       self.mem[offset] = self.R[r2] & 0xff
-      if offset == 256:
+      if offset == 256:  # memory mapped serial out
         print(chr(self.mem[offset]), end='')
 
     def op10(self, r2,r1,r0, addr):  # storl
       #print('storl %d,%d,%d'%(r2,r1,r0))
-      offset = self.R[r1] + self.R[r0]
+      offset = (self.R[r1] + self.R[r0]) & 0xffffffff
       self.mem[offset] = (self.R[r2]>>24) & 0xff
       self.mem[offset+1] = (self.R[r2]>>16) & 0xff
       self.mem[offset+2] = (self.R[r2]>>8) & 0xff
@@ -160,7 +180,7 @@ class environment:
 
     def op12(self, r2,r1,r0, addr):  # loadi (load byte immediate)
       #print('loadi %d,%d,%d'%(r2,r1,r0))
-      self.R[r2] = (r1<<4)|r0
+      self.R[r2] = (self.R[r2] & 0xffffff00) | ((r1<<4)|r0)
 
     def op13(self, r2,r1,r0, addr):  # branch
       # takebranch = ((r[13][31:29] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
@@ -182,7 +202,7 @@ class environment:
 
     def op14(self, r2,r1,r0, addr):  # jal (jump and link)
       #print('jal %d,%d,%d'%(r2,r1,r0))
-      offset = self.R[r1] + self.R[r0]
+      offset = (self.R[r1] + self.R[r0]) & 0xffffffff
       self.R[r2] = self.R[15]
       self.R[15] = offset
 

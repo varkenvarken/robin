@@ -23,6 +23,8 @@ test_strreverse.bin: $(MACROS) test_strreverse.s strlen.s strreverse.s
 
 test: $(OUTPUT)
 		$(SIMULATOR) --regs test_strlen.bin | grep 'R02 0000000f ('
+		$(SIMULATOR) --regs test_strchr.bin | grep 'R02 00000402 ('
+		$(SIMULATOR) -s 0x400 test_strreverse.bin | grep '"!zelur paA paaJ"'
 
 clean:
 	rm -f *.bin *.hexc strlen.s strreverse.s strchr.s
