@@ -35,4 +35,7 @@ clean:
 flash: $(OUTPUT)
 	$(PROG) $<
 
-.PHONY: all clean flash
+lint:
+	pep8 --max-line-length=127 -qq --statistics --count compiler/compiler.py
+
+.PHONY: all clean flash lint
