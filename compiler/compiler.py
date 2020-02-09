@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #  compiler.py, a compiler for the Robin SoC  (c) 2020 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify

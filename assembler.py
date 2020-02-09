@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #  An assembler for the robin cpu  (c) 2019,2020 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -401,7 +401,7 @@ def assemble(lines, debug=False):
                                 for fname, fno, lin in reversed(opcode.userdefined):
                                     for par, val in zip(opcode.parameters, ops):
                                         lin = lin.replace("${"+par+"}", val)
-                                    lines.insert(0, (fname, fno, l))
+                                    lines.insert(0, (fname, fno, lin))
                                 continue
                             else:
                                 codelen = opcode.length(operand, labels, addr, changed)
