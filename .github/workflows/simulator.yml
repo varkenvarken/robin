@@ -9,6 +9,9 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
+    - name: install prerequisites
+      run: |
+        pip install loguru
     - name: make all
       run: |
         cd libc/string
