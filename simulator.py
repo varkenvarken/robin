@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-#  A simulator for the Robin SoC  (c) 2020 Michel Anders
+#  simulator.py   A simulator for the Robin SoC  (c) 2020 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -28,9 +28,10 @@ def extend32(b):
 
 class environment:
 
-    def __init__(self, memimage):
+    def __init__(self, memimage, debug=False):
       self.mem = memimage
-      self.dump()
+      if debug:
+          self.dump()
 
     def dump(self):
         for a in range(0,len(self.mem),16):
@@ -78,13 +79,11 @@ class environment:
         if broken : input("Press Enter to continue...")
         self.dispatch(instruction, ip)
 
-      self.dump()
-
     def dispatch(self, ins, addr):
-      print("%04x"%ins)
+      #print("%04x"%ins)
       #if sys.byteorder == 'little':
       #    ins = (ins >> 8) | (ins << 8)
-      print("%04x"%ins)
+      #print("%04x"%ins)
       r2 = (ins >> 8 ) & 0xf
       r1 = (ins >> 4 ) & 0xf
       r0 = ins & 0xf
@@ -92,13 +91,13 @@ class environment:
       getattr(self,'op'+str(op))(r2,r1,r0,addr)
 
     def op0(self,r2,r1,r0,addr):  # move
-      print('move %d,%d,%d'%(r2,r1,r0))
+      #print('move %d,%d,%d'%(r2,r1,r0))
       self.R[r2] = self.R[r1] + self.R[r0]
 
     def op2(self,r2,r1,r0,addr):  # alu
       aluop = self.R[13]&0xff
       carry = 1 if self.R[13]&0x10000000 else 0
-      print('alu %d <- %d <%d> %d'%(r2,r1,aluop,r0))
+      #print('alu %d <- %d <%d> %d'%(r2,r1,aluop,r0))
       ops = {
         0: lambda x,y,c: x+y,
         1: lambda x,y,c: x+y+c,
@@ -127,32 +126,32 @@ class environment:
       # ignore generated carries for now
 
     def op3(self,r2,r1,r0,addr):  # mover
-      print('mover %d,%d,%d'%(r2,r1,r0))
+      #print('mover %d,%d,%d'%(r2,r1,r0))
       self.R[r2] = self.R[r1] + extend32(r0)*4
 
     def op4(self,r2,r1,r0,addr):  # load
-      print('load %d,%d,%d'%(r2,r1,r0))
+      #print('load %d,%d,%d'%(r2,r1,r0))
       self.R[r2] |= self.mem[self.R[r1] + self.R[r0]]  # doesn't touch bits 31-8 in dest register
 
     def op6(self,r2,r1,r0,addr):  # loadl
       mi = self.R[r1] + self.R[r0]
-      print('loadl %d,%d,%d (%d)'%(r2,r1,r0,mi))
+      #print('loadl %d,%d,%d (%d)'%(r2,r1,r0,mi))
       self.R[r2] = (self.mem[mi] << 24) | (self.mem[mi+1] << 16) | (self.mem[mi+2] << 8) | (self.mem[mi+3])
 
     def op7(self, r2,r1,r0, addr):  # loadil (load immediate long)
-      print('loadli %d,%d,%d'%(r2,r1,r0))
+      #print('loadli %d,%d,%d'%(r2,r1,r0))
       self.R[r2] = (self.mem[addr]<<24)|(self.mem[addr+1]<<16)|(self.mem[addr+2]<<8)|(self.mem[addr+3])
       self.R[15] += 4
 
     def op8(self, r2,r1,r0, addr):  # stor 
-      print('stor %d,%d,%d'%(r2,r1,r0))
+      #print('stor %d,%d,%d'%(r2,r1,r0))
       offset = self.R[r1] + self.R[r0]
       self.mem[offset] = self.R[r2] & 0xff
       if offset == 256:
         print(chr(self.mem[offset]), end='')
 
     def op10(self, r2,r1,r0, addr):  # storl
-      print('storl %d,%d,%d'%(r2,r1,r0))
+      #print('storl %d,%d,%d'%(r2,r1,r0))
       offset = self.R[r1] + self.R[r0]
       self.mem[offset] = (self.R[r2]>>24) & 0xff
       self.mem[offset+1] = (self.R[r2]>>16) & 0xff
@@ -160,7 +159,7 @@ class environment:
       self.mem[offset+3] = (self.R[r2]) & 0xff
 
     def op12(self, r2,r1,r0, addr):  # loadi (load byte immediate)
-      print('loadi %d,%d,%d'%(r2,r1,r0))
+      #print('loadi %d,%d,%d'%(r2,r1,r0))
       self.R[r2] = (r1<<4)|r0
 
     def op13(self, r2,r1,r0, addr):  # branch
@@ -169,7 +168,7 @@ class environment:
       cond = ((r2&0x07) & flags ) == ((r2>>3)*7) & (r2&0x07)
       offset8 = extend32((r1<<4)|r0)
       offset32 = (self.mem[addr]<<24)|(self.mem[addr+1]<<16)|(self.mem[addr+2]<<8)|(self.mem[addr+3])
-      print('bra %d,%d,%d, %d:%d  [%d,%d]  ::%d'%(r2,r1,r0,flags,cond,offset8,offset32,addr))
+      #print('bra %d,%d,%d, %d:%d  [%d,%d]  ::%d'%(r2,r1,r0,flags,cond,offset8,offset32,addr))
       if cond != 0:
         if offset8 == 0:
           addr += offset32 + 4
@@ -182,13 +181,13 @@ class environment:
       self.R[15] = addr & 0xffffffff
 
     def op14(self, r2,r1,r0, addr):  # jal (jump and link)
-      print('jal %d,%d,%d'%(r2,r1,r0))
+      #print('jal %d,%d,%d'%(r2,r1,r0))
       offset = self.R[r1] + self.R[r0]
       self.R[r2] = self.R[15]
       self.R[15] = offset
 
     def op15(self, r2,r1,r0, addr):  # special
-      print('special %d,%d,%d'%(r2,r1,r0))
+      #print('special %d,%d,%d'%(r2,r1,r0))
       if r0==0: # mark
         pass
       elif r0==1: # pop
@@ -258,10 +257,13 @@ def readhex(lines):
 if __name__ == '__main__':
 
     parser = ArgumentParser()
-    parser.add_argument('-s', '--start', help='start address of execution', default='0x200')
+    parser.add_argument('-S', '--start', help='start address of execution', default='0x200')
     parser.add_argument('-b', '--breakpoint', help='break point address', default='0')
+    parser.add_argument('-d', '--debug', help='show all sorts of info', action="store_true")
     parser.add_argument('-i', '--ihex', help='files are in intel hex format', action="store_true")
+    parser.add_argument('-r', '--regs', help='dump content of registers after run', action="store_true")
     parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
+    parser.add_argument('-s', '--str', help='show nul terminated string after run', default='')
     args = parser.parse_args()
 
     if args.ihex:
@@ -278,6 +280,23 @@ if __name__ == '__main__':
                 data = f.read()
                 memimg.extend(int(b) for b in data)
 
-    env = environment(memimg)
+    env = environment(memimg, args.debug)
     env.run(int(args.start,0), int(args.breakpoint,0))
-    print(env)
+    if args.debug:
+        env.dump()
+    if args.debug or args.regs:
+        print(env)
+    if args.str and args.str != '':
+        addr = int(args.str,0)
+        n = 256
+        print('"',end='')
+        while env.mem[addr] and n:
+            c = chr(env.mem[addr])
+            if c == '"':
+                c = '\\"'
+            elif c == '\\':
+                c = '\\\\'
+            print(c, end='')
+            addr += 1
+            n -= 1
+        print('"')
