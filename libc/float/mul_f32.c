@@ -1,4 +1,3 @@
-
 // inspired by: https://github.com/ucb-bar/berkeley-softfloat-3/blob/master/source/f32_mul.c
 
 extern void _mulu32_64_shift(int, int, int, int *);
