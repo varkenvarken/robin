@@ -1,11 +1,12 @@
 PYTHON = python	
-COMPILER = $(PYTHON) ../../compiler/compiler.py
-ASSEMBLER = $(PYTHON) ../../assembler.py
-SIMULATOR = $(PYTHON) ../../simulator.py
+COMPILER = $(PYTHON) ../../bin/compiler.py
+ASSEMBLER = $(PYTHON) ../../bin/assembler.py
+SIMULATOR = $(PYTHON) ../../bin/simulator.py
+MONITOR = $(PYTHON) ../../bin/monitor.py
 
 OUTPUT = $(TEST)/test_atof.bin $(TEST)/test_atoi.bin $(TEST)/test_ftoa.bin $(TEST)/test_itoa.bin $(TEST)/test_mulu32_64_shift.bin
 
-MACROS = ../../lib.S
+MACROS = ../../bin/lib.S
 
 STRING = ../string
 
@@ -44,7 +45,7 @@ test: $(OUTPUT)
 	$(SIMULATOR) -s 0x410 $(TEST)/test_ftoa.bin | grep '"-3.5"'
 
 testhard:
-	(cd Test; $(MONITOR) -b115200 -i -x test_all.cmd)
+	$(MONITOR) -b115200 -i -x Test/test_all.cmd
 
 .PHONY: all clean test testhard
 

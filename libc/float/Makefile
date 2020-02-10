@@ -1,7 +1,7 @@
-DIR = /home/michel/fpga/robin
-COMPILER = python3 ../../compiler/compiler.py
+COMPILER = ../../compiler/compiler.py
 ASSEMBLER = ../../assembler.py
-MONITOR = $(DIR)/monitor.py
+SIMULATOR = ../../simulator.py
+MONITOR = ../../monitor.py
 
 OUTPUT = $(TEST)/test_mul_f32.bin $(TEST)/test_leadingzeros.bin $(TEST)/test_add_f32.bin $(TEST)/test_div_f32.bin
 
@@ -37,12 +37,16 @@ $(TEST)/test_leadingzeros.bin: $(MACROS) $(TEST)/test_leadingzeros.s add_f32.s $
 	$(ASSEMBLER) $^ > $@
 
 clean:
-	rm -f *.bin *.hex
+	rm -f *.bin *.hex mul_f32.s div_f32.s add_f32.s
 
 test:
+	$(SIMULATOR) --mem 0x424:9 Test/test_leadingzeros.bin | grep '00000000,00000001,00000002,00000003,00000004,00000005,00000006,00000007,00000008,'
+	$(SIMULATOR) --mem 0x46c:9 Test/test_leadingzeros.bin | grep '00000000,00000004,00000008,00000009,00000010,00000012,00000018,0000001c,00000020,'
+
+testhard:
 	(cd Test; $(MONITOR) -b115200 -i -x test_all.cmd)
 
-.PHONY: all clean test
+.PHONY: all clean test testhard
 
 
 

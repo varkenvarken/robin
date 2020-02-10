@@ -2,7 +2,7 @@ SYN = yosys
 PNR = nextpnr-ice40
 GEN = icepack
 PROG = iceprog 
-ASSEMBLER = python3 assembler.py
+ASSEMBLER = ../bin/assembler.py
 
 TOP = robin.v
 PCF = icebreaker.pcf
@@ -23,11 +23,11 @@ all: $(OUTPUT)
 %.json: $(TOP) debounce.v fifo.v ram.v spram.v cpu.v alu.v divider.v $(PCF) rom.hex Makefile
 	$(SYN) -q -p "read_verilog $<; hierarchy -libdir . ; synth_ice40 -dsp -flatten -json $@"
 
-rom.hex: lib.S firmware.S
+rom.hex: ../bin/lib.S firmware.S
 	$(ASSEMBLER) --hex $^ > $@
 
 leading_zeros.hex: leading_zeros.py
-	python3 $^ > $@
+	python $^ > $@
 
 clean:
 	rm -f *.bin *.blif *.tiles *.asc *.json rom.hex
@@ -35,8 +35,4 @@ clean:
 flash: $(OUTPUT)
 	$(PROG) $<
 
-lint:
-	pep8 --max-line-length=127 -qq --statistics --count compiler/compiler.py
-	pep8 --max-line-length=127 -qq --statistics --count assembler.py
-
-.PHONY: all clean flash lint
+.PHONY: all clean flash

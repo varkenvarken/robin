@@ -18,7 +18,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Lint with pep8
       run: |
+        cd bin
         pip install pep8
         # stop the build if there are Python syntax errors or undefined names
-        pep8 --max-line-length=127 -qq --statistics --count compiler/compiler.py
+        pep8 --max-line-length=127 -qq --statistics --count compiler.py
         pep8 --max-line-length=127 -qq --statistics --count assembler.py
+        pep8 --max-line-length=127 -qq --statistics --count simulator.py
+        pep8 --max-line-length=127 -qq --statistics --count monitor.py

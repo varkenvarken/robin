@@ -1,11 +1,11 @@
 PYTHON = python
-COMPILER = $(PYTHON) ../../compiler/compiler.py
-ASSEMBLER = $(PYTHON) ../../assembler.py
-SIMULATOR = $(PYTHON) ../../simulator.py
+COMPILER = $(PYTHON) ../../bin/compiler.py
+ASSEMBLER = $(PYTHON) ../../bin/assembler.py
+SIMULATOR = $(PYTHON) ../../bin/simulator.py
 
 OUTPUT = test_strlen.bin test_strchr.bin test_strreverse.bin
 
-MACROS = ../../lib.S
+MACROS = ../../bin/lib.S
 
 all: $(OUTPUT)
 

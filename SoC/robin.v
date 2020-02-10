@@ -17,7 +17,7 @@
  * limitations under the License. 
  */
 
-`include "../puck/cores/osdvu/uart.v"  // outside the hierarchy so we have to include
+`include "../../puck/cores/osdvu/uart.v"  // outside the hierarchy so we have to include
 
 `default_nettype	none
 

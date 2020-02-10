@@ -37,8 +37,8 @@ newton_raphson_inverse:
         pop     link                
         mover   sp,sp,2             
         load    r2,r2,0             
-        bra     return_0001_d2852c14fc61
-return_0001_d2852c14fc61:
+        bra     return_0001_414ada9f9ac9
+return_0001_414ada9f9ac9:
         pop     r10                 
         pop     r9                  
         pop     frame               ; old framepointer
@@ -80,7 +80,7 @@ inverse:
         seteq   r2                  ; ==
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0009_d2852c14fc61
+        beq     end_ifstmt_0009_414ada9f9ac9
         mover   r4,0,-1             ; load value (id node)
         loadl   r2,frame,r4         ; load value of auto variable for union
         push    r2                  ; binop(&)
@@ -93,8 +93,8 @@ inverse:
         pop     r3                  ; binop(|)
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
-        bra     return_0002_d2852c14fc61
-end_ifstmt_0009_d2852c14fc61:
+        bra     return_0002_414ada9f9ac9
+end_ifstmt_0009_414ada9f9ac9:
         loadl   r2,#0x7EEEEEEE      ; int
         push    r2                  ; binop(-)
         mover   r4,0,-1             ; load value (id node)
@@ -169,8 +169,8 @@ end_ifstmt_0009_d2852c14fc61:
         move    r9,r3,0             ; assign long from register
         move    r2,r3,0             ; result of assignment is rvalue to be reused
         move    r2,r9,0             ; load x
-        bra     return_0002_d2852c14fc61
-return_0002_d2852c14fc61:
+        bra     return_0002_414ada9f9ac9
+return_0002_414ada9f9ac9:
         pop     r10                 
         pop     r9                  
         mover   sp,sp,1             ; remove space for 1 auto variables
