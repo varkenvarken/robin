@@ -34,3 +34,9 @@ jobs:
         make clean
         make all
         make test
+    - name: stdlib test
+      run: |
+        cd libc/float
+        make clean
+        make all
+        make test

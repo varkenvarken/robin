@@ -85,32 +85,32 @@ _mul_f32_:
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0029_ba4f579ee43f
+        beq     end_ifstmt_0029_e798ccd7d6d2
         move    r2,r6,0             ; load mana
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0030_ba4f579ee43f
+        beq     end_ifstmt_0030_e798ccd7d6d2
         loadl   r2,#0               ; int
-        bra     return_0001_ba4f579ee43f
-end_ifstmt_0030_ba4f579ee43f:
-end_ifstmt_0029_ba4f579ee43f:
+        bra     return_0001_e798ccd7d6d2
+end_ifstmt_0030_e798ccd7d6d2:
+end_ifstmt_0029_e798ccd7d6d2:
         mover   r4,0,-1             ; load expb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0031_ba4f579ee43f
+        beq     end_ifstmt_0031_e798ccd7d6d2
         mover   r4,0,-2             ; load manb (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         test    r2                  ; unary !
         seteq   r2                  ; unary !
         test    r2                  
-        beq     end_ifstmt_0032_ba4f579ee43f
+        beq     end_ifstmt_0032_e798ccd7d6d2
         loadl   r2,#0               ; int
-        bra     return_0001_ba4f579ee43f
-end_ifstmt_0032_ba4f579ee43f:
-end_ifstmt_0031_ba4f579ee43f:
+        bra     return_0001_e798ccd7d6d2
+end_ifstmt_0032_e798ccd7d6d2:
+end_ifstmt_0031_e798ccd7d6d2:
         move    r2,r7,0             ; load expa
         push    r2                  ; binop(+)
         mover   r4,0,-1             ; load expb (id node)
@@ -191,7 +191,7 @@ end_ifstmt_0031_ba4f579ee43f:
         setpos  r2                  ; >=
         test    r2                  ; setxxx does not alter flags
         test    r2                  
-        beq     end_ifstmt_0048_ba4f579ee43f
+        beq     end_ifstmt_0048_e798ccd7d6d2
         loadl   r2,#1               ; int
         push    r2                  
         mover   r4,0,-4             ; load expc (id node)
@@ -210,7 +210,7 @@ end_ifstmt_0031_ba4f579ee43f:
         alu     r3,r2,r3            ; assign long
         load    r4,#-28             
         storl   r3,frame,r4         ; assign byte/long to auto location
-end_ifstmt_0048_ba4f579ee43f:
+end_ifstmt_0048_e798ccd7d6d2:
         mover   r4,0,-3             ; load signc (id node)
         loadl   r2,frame,r4         ; load value of auto variable
         push    r2                  ; binop(|)
@@ -235,8 +235,8 @@ end_ifstmt_0048_ba4f579ee43f:
         pop     r3                  ; binop(|)
         load    flags,#alu_or       ; binop(|)
         alu     r2,r3,r2            
-        bra     return_0001_ba4f579ee43f
-return_0001_ba4f579ee43f:
+        bra     return_0001_e798ccd7d6d2
+return_0001_e798ccd7d6d2:
         pop     r10                 
         pop     r9                  
         pop     r8                  

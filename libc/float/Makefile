@@ -1,11 +1,11 @@
-COMPILER = ../../compiler/compiler.py
-ASSEMBLER = ../../assembler.py
-SIMULATOR = ../../simulator.py
-MONITOR = ../../monitor.py
+COMPILER = ../../bin/compiler.py
+ASSEMBLER = ../../bin/assembler.py
+SIMULATOR = ../../bin/simulator.py
+MONITOR = ../../bin/monitor.py
 
 OUTPUT = $(TEST)/test_mul_f32.bin $(TEST)/test_leadingzeros.bin $(TEST)/test_add_f32.bin $(TEST)/test_div_f32.bin
 
-MACROS = ../../lib.S
+MACROS = ../../bin/lib.S
 
 STDLIB = ../stdlib
 STRING = ../string
@@ -44,7 +44,7 @@ test:
 	$(SIMULATOR) --mem 0x46c:9 Test/test_leadingzeros.bin | grep '00000000,00000004,00000008,00000009,00000010,00000012,00000018,0000001c,00000020,'
 
 testhard:
-	(cd Test; $(MONITOR) -b115200 -i -x test_all.cmd)
+	$(MONITOR) -b115200 -i -x Test/test_all.cmd
 
 .PHONY: all clean test testhard
 
