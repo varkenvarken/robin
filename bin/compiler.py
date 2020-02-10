@@ -955,7 +955,7 @@ class Visitor(c_ast.NodeVisitor):
         return value(False, 0, "\n".join([self.visit(e).code for e in node.exprs]))
 
 
-@logger.catch
+
 def process(filename, globalutils):
     # Note that cpp is used. Provide a path to your own cpp or
     # make sure one exists in PATH.
