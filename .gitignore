@@ -1,1 +1,14 @@
 
+/libc/float/Test/test_add_f32.bin
+/libc/float/Test/test_div_f32.bin
+/libc/float/Test/test_leadingzeros.bin
+/libc/stdio/test_print.bin
+/libc/stdio/test_putchar.bin
+/libc/stdlib/Test/test_atof.bin
+/libc/stdlib/Test/test_atoi.bin
+/libc/stdlib/Test/test_ftoa.bin
+/libc/stdlib/Test/test_itoa.bin
+/libc/stdlib/Test/test_mulu32_64_shift.bin
+/libc/string/test_strchr.bin
+/libc/string/test_strlen.bin
+/libc/string/test_strreverse.bin
