@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #  compiler.py, a compiler for the Robin SoC  (c) 2020 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -953,7 +953,6 @@ class Visitor(c_ast.NodeVisitor):
 
     def visit_ExprList(self, node):
         return value(False, 0, "\n".join([self.visit(e).code for e in node.exprs]))
-
 
 
 def process(filename, globalutils):
