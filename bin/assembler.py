@@ -26,6 +26,9 @@ functions = {'__builtins__': {}}
 
 
 class Opcode:
+    """
+    Defines an opcode.
+    """
     def __init__(self, name, desc='',
                  registers=None, register=None, regsidx=None, implied=None, immediate=None, longimmediate=None, relative=None,
                  data=False, bytes=True, words=False, longs=False, addzero=True, cmd=0,

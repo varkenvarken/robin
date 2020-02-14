@@ -27,6 +27,11 @@ def extend32(b):
         return 0xffffff00 | b
     return b
 
+def extend16(w):
+    if w & 0x8000:
+        return 0xffff0000 | w
+    return w
+
 
 class environment:
 
@@ -116,9 +121,9 @@ class environment:
         # print('alu %d <- %d <%d> %d'%(r2,r1,aluop,r0))
         ops = {
             0: lambda x, y, c: x + y,
-            1: lambda x, y, c: x + y + c,
+            # 1: lambda x, y, c: x + y + c,
             2: lambda x, y, c: x - y,
-            3: lambda x, y, c: x - y - c,
+            # 3: lambda x, y, c: x - y - c,
             4: lambda x, y, c: x | y,
             5: lambda x, y, c: x & y,
             6: lambda x, y, c: x ^ y,
@@ -187,17 +192,11 @@ class environment:
         # takebranch = ((r[13][31:29] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
         flags = self.R[13] >> 29
         cond = ((r2 & 0x07) & flags) == ((r2 >> 3)*7) & (r2 & 0x07)
-        offset8 = extend32((r1 << 4) | r0)
-        offset32 = (self.mem[addr] << 24) | (self.mem[addr+1] << 16) | (self.mem[addr+2] << 8) | (self.mem[addr+3])
-        # print('bra %d,%d,%d, %d:%d  [%d,%d]  ::%d'%(r2,r1,r0,flags,cond,offset8,offset32,addr))
+        offset32 = extend16(self.mem[addr] << 8) | (self.mem[addr+1])
         if cond != 0:
-            if offset8 == 0:
-                addr += offset32 + 4
-            else:
-                addr += offset8
+            addr += offset32 + 2
         else:
-            if offset8 == 0:
-                addr += 4
+            addr += 2
         self.R[15] = addr & 0xffffffff
 
     def op14(self, r2, r1, r0, addr):  # jal (jump and link)

@@ -316,7 +316,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC3	:	begin
 							state <= FETCH1;
-							if(loadb3) r[R2][7:0] <= temp[31:24];
+							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24];
 							if(loadb2) state <= EXEC4;
 							if(storb2) begin
 								mem_waddr <= mem_waddr + 1;
@@ -339,7 +339,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC5	:	begin
 							state <= FETCH1;
-							if(loadb1) state <= EXEC6;
+							if(loadb1|branch) state <= EXEC6;
 							if(storb1) begin
 								mem_waddr <= mem_waddr + 1;
 								mem_data_in <= r[R2][15:8];
