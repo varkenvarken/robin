@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #  An assembler for the robin cpu  (c) 2019,2020 Michel Anders
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -19,20 +19,6 @@
 from argparse import ArgumentParser
 import fileinput
 import sys
-
-# MOVE  R2,R1,R0     registers
-# LOADB R2,R1,R0     registers
-# LOADW R2,R1,R0     registers
-# LOADL R2,R1,R0     registers
-# STORB R2,R1,R0     registers
-# STORW R2,R1,R0     registers
-# STORL R2,R1,R0     registers
-# LOAD  R2,#expr     immediate, longimmediate (LOADI and LOADLI)
-# BRA address	     relative
-# JUMP  R2,R1,R0     registers
-# HALT               implied
-# MARK  R2           register
-# MOVER R2,R1,idx    regsidx
 
 # we could fill this with some additional python symbols for evaluation but
 # we definitely do *not* want labels to clash with python internal names
@@ -103,8 +89,8 @@ class Opcode:
             # relative jumps have a short form too but I can't get my calculations for labels
             # to work properly with changing lengths due to changes elsewhere so I opt for safety
             # over optimizing.
-            rel = values[0] - (address+6)
-            return (self.relative * 256).to_bytes(2, 'big') + (rel).to_bytes(4, 'big', signed=True)
+            rel = values[0] - (address+4)
+            return (self.relative * 256).to_bytes(2, 'big') + (rel).to_bytes(2, 'big', signed=True)
         elif self.registers is not None:
             if(len(values) != 3):
                 raise ValueError("registers mode takes 3 values")
@@ -225,10 +211,7 @@ class Opcode:
                     except Exception as e:
                         opl = 6
                 elif len(values) > 0 and self.name in {'BRA', 'BRM', 'BRP', 'BEQ', 'BNE', }:
-                    # relative jumps have a short form too but I can't get my calculations for labels
-                    # to work properly with changing lengths due to changes elsewhere so I opt for safety
-                    # over optimizing.
-                    return 6
+                    return 4
             return opl
 
 
@@ -239,14 +222,10 @@ opcode_list = [
            registers=0x20),
     Opcode(name='LOAD', desc='MOVE R2 <- (R1+R0)b | #val',
            registers=0x40, immediate=0xc0, longimmediate=0x70),
-    Opcode(name='LOADW', desc='MOVE R2 <- (R1+R0)w',
-           registers=0x50, immediate=0xc0),
     Opcode(name='LOADL', desc='MOVE R2 <- (R1+R0)l | #val',
            registers=0x60, longimmediate=0x70),
     Opcode(name='STOR', desc='MOVE R2 -> (R1+R0)b',
            registers=0x80),
-    Opcode(name='STORW', desc='MOVE R2 -> (R1+R0)w',
-           registers=0x90),
     Opcode(name='STORL', desc='MOVE R2 -> (R1+R0)l',
            registers=0xa0),
     Opcode(name='BRA', desc='BRA always address expression',
@@ -261,8 +240,6 @@ opcode_list = [
            relative=0xd1),
     Opcode(name='JAL', desc='R2 <- PC;  PC <- R1+R0',
            registers=0xe0),
-    Opcode(name='MARK', desc='R2 <- counter',
-           register=0xf0, cmd=0),
     Opcode(name='SETEQ', desc='R2 <- zeroflag ? 1 : 0',
            register=0xf0, cmd=8),
     Opcode(name='SETNE', desc='R2 <- zeroflag ? 0 : 1',
@@ -275,7 +252,7 @@ opcode_list = [
            register=0xf0, cmd=2),
     Opcode(name='POP', desc='R2 <- (SP); SP <- SP + 4',
            register=0xf0, cmd=1),
-    Opcode(name='HALT', desc='halt and dump registers at 0x0002',
+    Opcode(name='HALT', desc='halt execution',
            implied=0xffff),
     Opcode(name='MOVER', desc='MOVE R2 <- R1+extend(4*r0)',
            regsidx=0x30),

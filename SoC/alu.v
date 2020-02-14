@@ -29,9 +29,9 @@
 	);
 
 	wire [32:0] add = {0, a + b};
-	wire [32:0] adc = add + { 32'd0, carry_in};
+	//wire [32:0] adc = add + { 32'd0, carry_in};
 	wire [32:0] sub = {0, a - b};
-	wire [32:0] sbc = sub - { 32'd0, carry_in};
+	//wire [32:0] sbc = sub - { 32'd0, carry_in};
 	wire [32:0] b_and = {0, a & b};
 	wire [32:0] b_or  = {0, a | b};
 	wire [32:0] b_xor = {0, a ^ b};
@@ -89,9 +89,9 @@
 
 	assign result = 
 				op[4:0] == 0 ? add :
-				op[4:0] == 1 ? adc :
+				//op[4:0] == 1 ? adc :
 				op[4:0] == 2 ? sub :
-				op[4:0] == 3 ? sbc :
+				//op[4:0] == 3 ? sbc :
 
 				op[4:0] == 4 ? b_or :
 				op[4:0] == 5 ? b_and :
