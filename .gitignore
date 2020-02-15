@@ -14,3 +14,4 @@
 /libc/string/test_strreverse.bin
 /SoC/Test/all_instructions.bin
 /SoC/Test/test.out
+/SoC/Test/alu_instructions.bin

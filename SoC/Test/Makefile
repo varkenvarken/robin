@@ -3,13 +3,16 @@ ASSEMBLER = $(PYTHON) ../../bin/assembler.py
 SIMULATOR = $(PYTHON) ../../bin/simulator.py
 MONITOR = $(PYTHON) ../../bin/monitor.py
 
-OUTPUT = all_instructions.bin
+OUTPUT = all_instructions.bin alu_instructions.bin
 
 STRING = ../string
 
 all: $(OUTPUT)
 
 all_instructions.bin: all_instructions.s
+	$(ASSEMBLER) $^ > $@
+
+alu_instructions.bin: alu_instructions.s
 	$(ASSEMBLER) $^ > $@
 
 clean:
@@ -30,9 +33,12 @@ test: $(OUTPUT)
 	grep 'R10 abacadab (2880220587)' test.out
 	grep 'R11 00000262 (       610)' test.out
 	grep 'R12 abacadab (2880220587)' test.out
+	$(SIMULATOR) --mem 0x400:32 alu_instructions.bin > test.out
+	grep '^00de49dc,ff658740,' test.out
 
 testhard:
 	$(MONITOR) -b115200 -i -x all_instructions.cmd
+	$(MONITOR) -b115200 -i -x alu_instructions.cmd
 
 .PHONY: all clean test testhard
 
