@@ -30,6 +30,35 @@ start: 0x200
     alu     r5,r3,r2
     storl   r5,r4,r0
     mover   r4,r4,1         ; add 4 to baseaddress
+    ; bitwise logic ops
+    loadl   r2,#0x77777777    ; 0111 0111 ...
+    loadl   r3,#0xaaaaaaaa    ; 1010 1010 ...
+    ; or
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_or
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; and
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_and
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; xor
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_xor
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; not
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_not
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+
+
     halt
 results: 0x400
 

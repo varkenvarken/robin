@@ -34,7 +34,7 @@ test: $(OUTPUT)
 	grep 'R11 00000262 (       610)' test.out
 	grep 'R12 abacadab (2880220587)' test.out
 	$(SIMULATOR) --mem 0x400:32 alu_instructions.bin > test.out
-	grep '^00de49dc,ff658740,' test.out
+	grep '^00de49dc,ff658740,ffffffff,22222222,dddddddd,55555555,' test.out
 
 testhard:
 	$(MONITOR) -b115200 -i -x all_instructions.cmd
