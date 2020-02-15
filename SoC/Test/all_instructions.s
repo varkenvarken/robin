@@ -53,6 +53,20 @@ isequal:
     loadl   r12,#0xdeadbeef
 jumptarget:
     loadl   r12,#0xabacadab
-
     ; specials, opcode 15
+    ; pop and push
+    loadl   sp,#stack+4*4       ; 0x410
+    push    r2                  ; contains 1
+    move    r2,r0,r0
+    pop     r2
+    ; setxxx
+    load    flags,#alu_tst
+    alu     r0,r0,r0            ; sets z=1, n=0
+    setne   r2                  ; r2 <- 0
+    setpos  r2                  ; r2 <- 1
+    setmin  r2                  ; r2 <- 0
+    seteq   r2                  ; r2 <- 1   
     halt
+stack: 0x400
+    long 0,0,0,0
+
