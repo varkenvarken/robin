@@ -27,6 +27,7 @@ def extend32(b):
         return 0xffffff00 | b
     return b
 
+
 def extend16(w):
     if w & 0x8000:
         return 0xffff0000 | w
