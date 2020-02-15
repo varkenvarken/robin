@@ -1,4 +1,18 @@
 start: 0x200
+    ; wipe all registers except r0,r1,pc
+    move r2,r0,r0
+    move r3,r0,r0
+    move r4,r0,r0
+    move r5,r0,r0
+    move r6,r0,r0
+    move r7,r0,r0
+    move r8,r0,r0
+    move r9,r0,r0
+    move r10,r0,r0
+    move r11,r0,r0
+    move r12,r0,r0
+    move r13,r0,r0
+    move r14,r0,r0
     ; opcodes 1,5,9,11 are unused
     ; move, opcode 0
     move    r2,r1,r0            ; r2 <- r1 + r0  (1)
@@ -26,6 +40,19 @@ start: 0x200
     loadl   r9,#0xdeadbeef
 always:
     loadl   r9,#0xabacadab
+    ; beq
+    load    flags,#alu_tst
+    alu     r0,r0,r0            ; should set zero flag
+    beq     isequal
+    loadl   r10,#0xdeadbeef
+isequal:
+    loadl   r10,#0xabacadab
     ; jal, opcode 14
+    loadl   r11,#jumptarget
+    jal     r11,r11,r0
+    loadl   r12,#0xdeadbeef
+jumptarget:
+    loadl   r12,#0xabacadab
+
     ; specials, opcode 15
     halt
