@@ -23,6 +23,12 @@ jobs:
         pip install pycparser
     - name: string test
       if: always()
+    - name: float test
+      run: |
+        cd SoC/Test
+        make clean
+        make all
+        make test
       run: |
         cd libc/string
         make clean
@@ -31,12 +37,6 @@ jobs:
     - name: stdlib test
       run: |
         cd libc/stdlib
-        make clean
-        make all
-        make test
-    - name: float test
-      run: |
-        cd libc/float
         make clean
         make all
         make test

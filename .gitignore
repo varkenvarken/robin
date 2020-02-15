@@ -12,3 +12,5 @@
 /libc/string/test_strchr.bin
 /libc/string/test_strlen.bin
 /libc/string/test_strreverse.bin
+/SoC/Test/all_instructions.bin
+/SoC/Test/test.out

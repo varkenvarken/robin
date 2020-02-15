@@ -1,4 +1,4 @@
-PYTHON = python	
+PYTHON = python3
 COMPILER = $(PYTHON) ../../bin/compiler.py
 ASSEMBLER = $(PYTHON) ../../bin/assembler.py
 SIMULATOR = $(PYTHON) ../../bin/simulator.py
