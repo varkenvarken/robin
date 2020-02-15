@@ -71,7 +71,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	wire div_is_negative;
 	wire div_is_available;
 
-	divider div(
+	divider div0(
 		.clk(clk),
 		.reset(reset),
 		.a(div_a),
@@ -107,7 +107,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
 
 	reg pop, push;
-	reg alu, div_go;
+	reg alu, div, div_go;
 	reg loadb3, loadb2, loadb1, loadb0;
 	reg branch, movereg;
 	reg storb3, storb2, storb1, storb0;
@@ -184,9 +184,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			FETCH6	:	begin
 							instruction[7:0] <= mem_data_out;
 							r[15] <= r[15] + 1;
+							div_go <= 0;
 							state <= DECODE;
 							alu <= 0;
-							div_go <= 0;
+							div <= 0;
 							pop <= 0;
 							push <= 0;
 							loadb3 <= 0;
@@ -205,8 +206,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							case(cmd)
 								CMD_MOVEP:	movereg <= 1;
 								CMD_ALU:	begin
-												if(alu_op[5]) div_go <= 1; // start the divider module if we have a divider operation
-												else alu <= 1;
+												if(alu_op[5]) begin 
+													div_go <= 1; // start the divider module if we have a divider operation
+													div <= 1;
+												end	else
+													alu <= 1;
 											end
 								CMD_MOVER:	begin
 												r[R2] <= r1_offset;
@@ -288,17 +292,28 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							endcase
 						end
 			EXEC1	:	begin
+							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
-							if(movereg) begin
+							if (movereg) begin
 								r[R2] <= sumr1r0;
 								state <= FETCH1;
 							end
-							if(alu | div_is_available) begin
+							if (alu) begin
 								r[R2] <= alu_c;
 								r[13][29] <= alu_is_zero;
 								r[13][30] <= alu_is_negative;
 								state <= FETCH1;
-							end else if(div_go) state <= EXEC1;
+							end
+							if (div) begin // a divider operation (multiple cycles)
+								if(div_is_available) begin
+									r[R2] <= div_c;
+									r[13][29] <= div_is_zero;
+									r[13][30] <= div_is_negative;
+									state <= FETCH1;
+								end else begin
+									state <= EXEC1; 
+								end
+							end
 							if(storb3) mem_data_in <= storb2 ? r[R2][31:24] : r[R2][7:0] ; // first mem_waddr is set in DECODE step already
 						end
 			EXEC2	:	begin
