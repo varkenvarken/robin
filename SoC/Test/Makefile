@@ -26,6 +26,7 @@ test: $(OUTPUT)
 	grep 'R06 00000020 (        32)' test.out
 	grep 'R07 00000049 (        73)' test.out
 	grep 'R08 12345649 ( 305419849)' test.out
+	grep 'R09 abacadab (2880220587)' test.out
 
 testhard:
 	$(MONITOR) -b115200 -i -x all_instructions.cmd

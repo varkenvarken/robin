@@ -22,6 +22,10 @@ start: 0x200
     ; loadl, opcode 6
     loadl   r8,r6,r1
     ; branch, opcode 13
+    bra     always
+    loadl   r9,#0xdeadbeef
+always:
+    loadl   r9,#0xabacadab
     ; jal, opcode 14
     ; specials, opcode 15
     halt

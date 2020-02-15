@@ -21,14 +21,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install loguru
         pip install pycparser
-    - name: string test
+    - name: cpu test
       if: always()
-    - name: float test
       run: |
         cd SoC/Test
         make clean
         make all
         make test
+    - name: string test
       run: |
         cd libc/string
         make clean
