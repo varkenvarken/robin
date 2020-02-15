@@ -301,6 +301,9 @@ if __name__ == '__main__':
             with open(filename, 'rb') as f:
                 data = f.read()
                 memimg.extend(int(b) for b in data)
+    # make non initialized ram addressable (note that 0x2000 is actually rom but we ignore that for now)
+    extra = 256*1024 - len(memimg)
+    memimg.extend([0]* extra)
 
     env = environment(memimg, args.debug)
     env.run(int(args.start, 0), int(args.breakpoint, 0))
