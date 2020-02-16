@@ -44,7 +44,7 @@
 	wire shifthi   = doshift &  nshift[4];	// true if shifting >= 16 bits
 
 	// determine power of two
-	wire shiftla0  = nshift[3:0]  == 4'd0;	// 2^0 = 1
+	/* wire shiftla0  = nshift[3:0]  == 4'd0;	// 2^0 = 1
 	wire shiftla1  = nshift[3:0]  == 4'd1;	// 2^1 = 2
 	wire shiftla2  = nshift[3:0]  == 4'd2;	// 2^2 = 3
 	wire shiftla3  = nshift[3:0]  == 4'd3;	// ... etc 
@@ -60,12 +60,31 @@
 	wire shiftla13 = nshift[3:0]  == 4'd13;
 	wire shiftla14 = nshift[3:0]  == 4'd14;
 	wire shiftla15 = nshift[3:0]  == 4'd15;
+	*/
+
+	wire shiftla0  = ~nshift[3] & ~nshift[2] & ~nshift[1] & ~nshift[0];
+	wire shiftla1  = ~nshift[3] & ~nshift[2] & ~nshift[1] &  nshift[0];
+	wire shiftla2  = ~nshift[3] & ~nshift[2] &  nshift[1] & ~nshift[0];
+	wire shiftla3  = ~nshift[3] & ~nshift[2] &  nshift[1] &  nshift[0];
+	wire shiftla4  = ~nshift[3] &  nshift[2] & ~nshift[1] & ~nshift[0];
+	wire shiftla5  = ~nshift[3] &  nshift[2] & ~nshift[1] &  nshift[0];
+	wire shiftla6  = ~nshift[3] &  nshift[2] &  nshift[1] & ~nshift[0];
+	wire shiftla7  = ~nshift[3] &  nshift[2] &  nshift[1] &  nshift[0];
+	wire shiftla8  =  nshift[3] & ~nshift[2] & ~nshift[1] & ~nshift[0];
+	wire shiftla9  =  nshift[3] & ~nshift[2] & ~nshift[1] &  nshift[0];
+	wire shiftla10 =  nshift[3] & ~nshift[2] &  nshift[1] & ~nshift[0];
+	wire shiftla11 =  nshift[3] & ~nshift[2] &  nshift[1] &  nshift[0];
+	wire shiftla12 =  nshift[3] &  nshift[2] & ~nshift[1] & ~nshift[0];
+	wire shiftla13 =  nshift[3] &  nshift[2] & ~nshift[1] &  nshift[0];
+	wire shiftla14 =  nshift[3] &  nshift[2] &  nshift[1] & ~nshift[0];
+	wire shiftla15 =  nshift[3] &  nshift[2] &  nshift[1] &  nshift[0];
+
 	// combine into 16 bit word
 	wire [15:0] shiftla16 = {shiftla15,shiftla14,shiftla13,shiftla12,
 							 shiftla11,shiftla10,shiftla9 ,shiftla8 ,
 							 shiftla7 ,shiftla6 ,shiftla5 ,shiftla4 ,
 							 shiftla3 ,shiftla2 ,shiftla1 ,shiftla0};
-
+	
 	// 4 16x16 bit partial multiplications
 	// the multiplier is either the b operand or a power of two for a shift
 	// note that b[31:16] for shift operations [31-0] is always zero
