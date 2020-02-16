@@ -119,7 +119,10 @@ class environment:
     def op2(self, r2, r1, r0, addr):  # alu
         aluop = self.R[13] & 0xff
         carry = 1 if self.R[13] & 0x10000000 else 0
-        # print('alu %d <- %d <%d> %d'%(r2,r1,aluop,r0))
+
+        def absu(x):  # absolute of a 32 bit number interpreted as a signed long
+            return abs(unpack('>l', pack('>L', x))[0])
+
         ops = {
             0: lambda x, y, c: x + y,
             # 1: lambda x, y, c: x + y + c,
@@ -137,11 +140,12 @@ class environment:
             17: lambda x, y, c: (x * y) & 0xffffffff,
             18: lambda x, y, c: (x * y) >> 32,
             32: lambda x, y, c: x // y,
-            33: lambda x, y, c: (-1 if ((x ^ y) & 0x80000000) else 1) * (abs(x) // abs(y)),
+            33: lambda x, y, c: (-1 if ((x ^ y) & 0x80000000) else 1) * (absu(x) // absu(y)),
             34: lambda x, y, c: x - y * (x // y),
-            35: lambda x, y, c: (-1 if ((x ^ y) & 0x80000000) else 1) * (abs(x) - abs(y) * (abs(x) // abs(y))),
+            35: lambda x, y, c: (-1 if ((x ^ y) & 0x80000000) else 1) * (absu(x) - absu(y) * (absu(x) // absu(y))),
         }
         self.R[r2] = self.unsigned(ops[aluop](self.R[r1], self.R[r0], carry))
+        # print('alu %d <- %d <%d> %d %x=%x op %x'%(r2,r1,aluop,r0, self.R[r2], self.R[r1], self.R[r0]))
         self.R[13] &= 0x8fffffff  # clear flags
         self.R[13] |= 0x40000000 if self.R[r2] & 0x80000000 else 0
         self.R[13] |= 0x20000000 if self.R[r2] == 0 else 0
@@ -166,7 +170,7 @@ class environment:
 
     def op7(self, r2, r1, r0, addr):  # loadil (load immediate long)
         # print('loadli %d,%d,%d'%(r2,r1,r0))
-        print(self.mem[addr:addr+4])
+        # print(self.mem[addr:addr+4])
         self.R[r2] = (self.mem[addr] << 24) | (self.mem[addr+1] << 16) | (self.mem[addr+2] << 8) | (self.mem[addr+3])
         self.R[15] += 4
 
