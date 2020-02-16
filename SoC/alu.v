@@ -26,15 +26,14 @@
 	output is_negative
 	);
 
-	wire [32:0] add = {0, a + b};
-	wire [32:0] sub = {0, a - b};
-	wire [32:0] b_and = {0, a & b};
-	wire [32:0] b_or  = {0, a | b};
-	wire [32:0] b_xor = {0, a ^ b};
-	wire [32:0] b_not = {0,~a    };
-	wire [32:0] extend = {a[31],a};
-	wire [32:0] min_a = -extend;
-	wire [32:0] cmp = sub[31] ? 33'h1ffff_ffff : sub == 0 ? 0 : 1;
+	wire [31:0] add = a + b;
+	wire [31:0] sub = a - b;
+	wire [31:0] b_and = a & b;
+	wire [31:0] b_or  = a | b;
+	wire [31:0] b_xor = a ^ b;
+	wire [31:0] b_not = ~a;
+	wire [31:0] min_a = -a;
+	wire [31:0] cmp = sub[31] ? 32'hffff_ffff : sub == 0 ? 0 : 1;
 
 	wire shiftq    = op[4:0] == 12;		// true if operaration is shift left
 	wire shiftqr   = op[4:0] == 13;		// true if operaration is shift right
@@ -81,31 +80,26 @@
 	wire [63:0] mult64 = {32'b0,mult_al_bl} + {16'b0,mult_al_bh,16'b0}
 				       + {16'b0,mult_ah_bl,16'b0} + {mult_ah_bh,32'b0};
 
-	wire [32:0] result;
-
-	assign result = 
+	assign c = 
 				op[4:0] == 0 ? add :
-				//op[4:0] == 1 ? adc :
 				op[4:0] == 2 ? sub :
-				//op[4:0] == 3 ? sbc :
-
+				
 				op[4:0] == 4 ? b_or :
 				op[4:0] == 5 ? b_and :
 				op[4:0] == 6 ? b_not :
 				op[4:0] == 7 ? b_xor :
 
 				op[4:0] == 8 ? cmp :
-				op[4:0] == 9 ? {1'b0, a} :
+				op[4:0] == 9 ? a :
 
-				shiftq  ? {1'b0, mult64[31:0]} :
-				shiftqr ? {1'b0, mult64[63:32]} :
+				shiftq  ? mult64[31:0] :
+				shiftqr ? mult64[63:32] :
 
-				op[4:0] == 16 ? {17'b0, mult_al_bl} :
-				op[4:0] == 17 ? {1'b0, mult64[31:0]} :
-				op[4:0] == 18 ? {1'b0, mult64[63:32]} :
+				op[4:0] == 16 ? {16'b0, mult_al_bl} :
+				op[4:0] == 17 ? mult64[31:0] :
+				op[4:0] == 18 ? mult64[63:32] :
 				33'b0;
 
-	assign c = result[31:0];
 	assign is_zero = (c == 0);
 	assign is_negative = c[31];
 
