@@ -54,6 +54,94 @@ start: 0x200
     ; not
     storl   r0,r4,r0        ; wipe result
     load    flags,#alu_not
+    alu     r5,r3,r2        ; 2nd operand is irrelevant
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; comparison ops
+    ; cmp
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_cmp
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; test
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_tst
+    alu     r5,r3,r2        ; 2nd operand is irrelevant
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; multiplication ops
+    ; mul16
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_mul16
+    alu     r5,r3,r2        ; upper 16 bits of each operand are ignored
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; mulhi
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_mulhi
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; mullo
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_mullo
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; shift instructions
+    ; shiftl
+    loadl   r6,#2
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_shiftl
+    alu     r5,r3,r6
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; shiftr
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_shiftr
+    alu     r5,r3,r6
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; division operations
+    ; divu
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_divu
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; remu
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_remu
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; divs 
+    ; two positive numbers
+    loadl   r2,#0x77777777
+    loadl   r3,#0x7aaaaaaa
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_divs
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; rems
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_rems
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; negative divided by positive
+    loadl   r2,#0x77777777
+    loadl   r3,#0xaaaaaaaa
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_divs
+    alu     r5,r3,r2
+    storl   r5,r4,r0
+    mover   r4,r4,1         ; add 4 to baseaddress
+    ; rems
+    storl   r0,r4,r0        ; wipe result
+    load    flags,#alu_rems
     alu     r5,r3,r2
     storl   r5,r4,r0
     mover   r4,r4,1         ; add 4 to baseaddress
