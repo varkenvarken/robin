@@ -1,4 +1,4 @@
-name: Simulations
+name: Libraries
 
 on: [push]
 
@@ -21,10 +21,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install loguru
         pip install pycparser
-    - name: cpu test
+    - name: string test
       if: always()
       run: |
-        cd SoC/Test
+        cd libc/string
+        make clean
+        make all
+        make test
+    - name: stdlib test
+      run: |
+        cd libc/stdlib
         make clean
         make all
         make test
