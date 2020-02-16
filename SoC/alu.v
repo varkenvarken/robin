@@ -20,18 +20,14 @@
  module alu(
 	input [31:0] a,
 	input [31:0] b,
-	input carry_in,
 	input [7:0] op,
 	output [31:0] c,
-	output carry_out,
 	output is_zero,
 	output is_negative
 	);
 
 	wire [32:0] add = {0, a + b};
-	//wire [32:0] adc = add + { 32'd0, carry_in};
 	wire [32:0] sub = {0, a - b};
-	//wire [32:0] sbc = sub - { 32'd0, carry_in};
 	wire [32:0] b_and = {0, a & b};
 	wire [32:0] b_or  = {0, a | b};
 	wire [32:0] b_xor = {0, a ^ b};
@@ -110,7 +106,6 @@
 				33'b0;
 
 	assign c = result[31:0];
-	assign carry_out = result[32];
 	assign is_zero = (c == 0);
 	assign is_negative = c[31];
 

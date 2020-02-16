@@ -43,20 +43,16 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	// alu
 	wire [31:0] alu_a = r[R1];
 	wire [31:0] alu_b = r[R0];
-	wire alu_carry_in = r[13][28];
 	wire [7:0] alu_op = r[13][7:0];
 	wire [31:0] alu_c;
-	wire alu_carry_out;
 	wire alu_is_zero;
 	wire alu_is_negative;
 
 	alu alu0(
 		.a(alu_a),
 		.b(alu_b),
-		.carry_in(alu_carry_in),
 		.op(alu_op),
 		.c(alu_c),
-		.carry_out(alu_carry_out),
 		.is_zero(alu_is_zero),
 		.is_negative(alu_is_negative)
 	);
