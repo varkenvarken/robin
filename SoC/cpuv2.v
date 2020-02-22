@@ -125,12 +125,14 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
 
 	localparam CMD_MOVEP   =  0;
+	localparam CMD_POP     =  1;
 	localparam CMD_ALU     =  2;
 	localparam CMD_MOVER   =  3;
 	localparam CMD_LOADB   =  4;
 	localparam CMD_LOADL   =  6;
 	localparam CMD_LOADIL  =  7;
 	localparam CMD_STORB   =  8;
+	localparam CMD_PUSH    =  9;
 	localparam CMD_STORL   = 10;
 	localparam CMD_LOADI   = 12;
 	localparam CMD_BRANCH  = 13;
@@ -158,7 +160,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			state <= HALT;
 			instruction <= 0; // this will clear haltinstruction
 		end else
-		case(state) // parallel_case
+		case(state)
 			FETCH1	:	begin
 							r[0] <= 0;
 							r[1] <= 1;
@@ -207,6 +209,14 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												end	else
 													alu <= 1;
 											end
+								CMD_POP:	begin
+												mem_raddr <= r[14];
+												loadb3 <= 1;
+												loadb2 <= 1;
+												loadb1 <= 1;
+												loadb0 <= 1;
+												pop <= 1;
+											end
 								CMD_MOVER:	begin
 												r[R2] <= r1_offset;
 												state <= FETCH1;
@@ -234,6 +244,14 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												storb3 <= 1;
 												mem_waddr <= sumr1r0_addr;
 											end
+								CMD_PUSH:	begin
+												r[14] <= r[14] - 4;
+												mem_waddr <= r[14] - 4;
+												storb3 <= 1;
+												storb2 <= 1;
+												storb1 <= 1;
+												storb0 <= 1;
+											end
 								CMD_STORL:	begin
 												storb3 <= 1;
 												storb2 <= 1;
@@ -260,22 +278,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								CMD_SPECIAL:begin
 												state <= EXEC1;
 												case(immediate)
-													SPECIAL_POP:	begin
-																		mem_raddr <= r[14];
-																		loadb3 <= 1;
-																		loadb2 <= 1;
-																		loadb1 <= 1;
-																		loadb0 <= 1;
-																		pop <= 1;
-																	end
-													SPECIAL_PUSH:	begin
-																		r[14] <= r[14] - 4;
-																		mem_waddr <= r[14] - 4;
-																		storb3 <= 1;
-																		storb2 <= 1;
-																		storb1 <= 1;
-																		storb0 <= 1;
-																	end
 													SPECIAL_SETEQ:	r[R2] <= {31'b0,  r[13][29]};
 													SPECIAL_SETNE:	r[R2] <= {31'b0, ~r[13][29]};
 													SPECIAL_SETMIN:	r[R2] <= {31'b0,  r[13][30]};

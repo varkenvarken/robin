@@ -210,6 +210,19 @@ class environment:
         self.R[r2] = self.R[15]
         self.R[15] = offset
 
+    def op1(self, r2, r1, r0, addr):  # pop
+        sp = self.R[14]
+        self.R[r2] = (self.mem[sp] << 24) | (self.mem[sp+1] << 16) | (self.mem[sp+2] << 8) | (self.mem[sp+3])
+        self.R[14] += 4
+
+    def op9(self, r2, r1, r0, addr):  # push
+        self.R[14] -= 4
+        sp = self.R[14]
+        self.mem[sp] = (self.R[r2] >> 24) & 0xff
+        self.mem[sp+1] = (self.R[r2] >> 16) & 0xff
+        self.mem[sp+2] = (self.R[r2] >> 8) & 0xff
+        self.mem[sp+3] = (self.R[r2]) & 0xff
+
     def op15(self, r2, r1, r0, addr):  # special
         # print('special %d,%d,%d'%(r2,r1,r0))
         if r0 == 0:  # mark
