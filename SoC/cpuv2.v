@@ -129,6 +129,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	localparam CMD_ALU     =  2;
 	localparam CMD_MOVER   =  3;
 	localparam CMD_LOADB   =  4;
+	localparam CMD_SETBRA  =  5;
 	localparam CMD_LOADL   =  6;
 	localparam CMD_LOADIL  =  7;
 	localparam CMD_STORB   =  8;
@@ -269,6 +270,14 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												loadb2 <= 1;
 												mem_raddr <= r[15];
 												r[15] <= r[15] + 2;
+											end
+								CMD_SETBRA:	begin
+												branch <= 1;
+												loadb3 <= 1;
+												loadb2 <= 1;
+												mem_raddr <= r[15];
+												r[15] <= r[15] + 2;
+												r[R1] <= takebranch; // R1 because R2 decodes the condition
 											end
 								CMD_JUMP:	begin
 												r[R2] <= r[15];

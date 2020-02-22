@@ -204,6 +204,19 @@ class environment:
             addr += 2
         self.R[15] = addr & 0xffffffff
 
+    def op5(self, r2, r1, r0, addr):  # set and branch
+        # takebranch = ((r[13][31:29] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
+        flags = self.R[13] >> 29
+        cond = ((r2 & 0x07) & flags) == ((r2 >> 3)*7) & (r2 & 0x07)
+        offset32 = extend16(self.mem[addr] << 8) | (self.mem[addr+1])
+        if cond != 0:
+            addr += offset32 + 2
+            self.R[r1] = 1
+        else:
+            addr += 2
+            self.R[r1] = 0
+        self.R[15] = addr & 0xffffffff
+
     def op14(self, r2, r1, r0, addr):  # jal (jump and link)
         # print('jal %d,%d,%d'%(r2,r1,r0))
         offset = (self.R[r1] + self.R[r0]) & 0xffffffff

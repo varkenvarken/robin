@@ -30,7 +30,8 @@ class Opcode:
     Defines an opcode.
     """
     def __init__(self, name, desc='',
-                 registers=None, register=None, regsidx=None, implied=None, immediate=None, longimmediate=None, relative=None,
+                 registers=None, register=None, regsidx=None, implied=None, immediate=None, longimmediate=None,
+                 relative=None, setbra=None,
                  data=False, bytes=True, words=False, longs=False, addzero=True, cmd=0,
                  userdefined=None, parameters=[]):
         self.name = name.upper()
@@ -42,6 +43,7 @@ class Opcode:
         self.immediate = immediate
         self.longimmediate = longimmediate
         self.relative = relative
+        self.setbra = setbra
         self.data = data
         self.bytes = bytes
         self.words = words
@@ -89,11 +91,16 @@ class Opcode:
         elif self.relative is not None:
             if(len(values) > 1):
                 raise ValueError("relative mode takes 1 value only")
-            # relative jumps have a short form too but I can't get my calculations for labels
-            # to work properly with changing lengths due to changes elsewhere so I opt for safety
-            # over optimizing.
             rel = values[0] - (address+4)
             return (self.relative * 256).to_bytes(2, 'big') + (rel).to_bytes(2, 'big', signed=True)
+        elif self.setbra is not None:
+            if(len(values) != 2):
+                raise ValueError("set and branch mode takes 2 values only")
+            rel = values[1] - (address+4) if values[1] is not None else 0
+            v = values[0]
+            if v < 0 or v > 15:
+                raise ValueError("target register not in range [0:15]")
+            return (self.setbra * 256 + (v << 4)).to_bytes(2, 'big') + (rel).to_bytes(2, 'big', signed=True)
         elif self.registers is not None:
             if(len(values) != 3):
                 raise ValueError("registers mode takes 3 values")
@@ -213,7 +220,8 @@ class Opcode:
                             opl = 6
                     except Exception as e:
                         opl = 6
-                elif len(values) > 0 and self.name in {'BRA', 'BRM', 'BRP', 'BEQ', 'BNE', }:
+                elif len(values) > 0 and self.name in {'BRA', 'BRM', 'BRP', 'BEQ', 'BNE',
+                                                       'SETBRA', 'SETBRM', 'SETBRP', 'SETBEQ', 'SETBNE'}:
                     return 4
             return opl
 
@@ -231,26 +239,8 @@ opcode_list = [
            registers=0x80),
     Opcode(name='STORL', desc='MOVE R2 -> (R1+R0)l',
            registers=0xa0),
-    Opcode(name='BRA', desc='BRA always address expression',
-           relative=0xdc),
-    Opcode(name='BRM', desc='BRA if minus address expression',
-           relative=0xda),
-    Opcode(name='BRP', desc='BRA if pos address expression',
-           relative=0xd2),
-    Opcode(name='BEQ', desc='BRA if zero address expression',
-           relative=0xd9),
-    Opcode(name='BNE', desc='Branch if not zero address expression',
-           relative=0xd1),
     Opcode(name='JAL', desc='R2 <- PC;  PC <- R1+R0',
            registers=0xe0),
-    Opcode(name='SETEQ', desc='R2 <- zeroflag ? 1 : 0',
-           register=0xf0, cmd=8),
-    Opcode(name='SETNE', desc='R2 <- zeroflag ? 0 : 1',
-           register=0xf0, cmd=9),
-    Opcode(name='SETMIN', desc='R2 <- minusflag ? 1 : 0',
-           register=0xf0, cmd=12),
-    Opcode(name='SETPOS', desc='R2 <- minusflag ? 0 : 1',
-           register=0xf0, cmd=13),
     Opcode(name='PUSH', desc='SP <- SP -4; (SP) <- R2',
            register=0x90, cmd=0),
     Opcode(name='POP', desc='R2 <- (SP); SP <- SP + 4',
@@ -259,6 +249,17 @@ opcode_list = [
            implied=0xffff),
     Opcode(name='MOVER', desc='MOVE R2 <- R1+extend(4*r0)',
            regsidx=0x30),
+
+    Opcode(name='SETBRA', desc='R1 <- 1; Branch always',
+           setbra=0x5c),
+    Opcode(name='SETBRM', desc='R1 <- minusflag ? 1 : 0; Branch if minus',
+           setbra=0x5a),
+    Opcode(name='SETBRP', desc='R1 <- minusflag ? 0 : 1; Branch if positive',
+           setbra=0x52),
+    Opcode(name='SETBEQ', desc='R1 <- zeroflag ? 1 : 0; Branch if equal',
+           setbra=0x59),
+    Opcode(name='SETBNE', desc='R1 <- zeroflag ? 0 : 1; Branch if not equal',
+           setbra=0x51),
 
     Opcode(name='BYTE', desc='define byte values (comma separated or string)',
            data=True, bytes=True, words=False, longs=False, addzero=False),
@@ -301,7 +302,7 @@ def assemble(lines, debug=False):
         'alu_and': 5, 'alu_or': 4, 'alu_xor': 7, 'alu_not': 6,
         'alu_cmp': 8, 'alu_tst': 9,
         'alu_shiftl': 12, 'alu_shiftr': 13,
-        'alu_mul16': 16, 'alu_mullo': 17, 'alu_mulhi': 18,
+        'alu_mullo': 17, 'alu_mulhi': 18,
         'alu_divu': 32, 'alu_divs': 33, 'alu_remu': 34, 'alu_rems': 35,
     }
 

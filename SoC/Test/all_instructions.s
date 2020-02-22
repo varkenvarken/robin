@@ -13,7 +13,7 @@ start: 0x200
     move r12,r0,r0
     move r13,r0,r0
     move r14,r0,r0
-    ; opcodes 1,5,9,11 are unused
+    ; opcode 11 is unused
     ; move, opcode 0
     move    r2,r1,r0            ; r2 <- r1 + r0  (1)
     ; loadil, opcode 7 
@@ -53,13 +53,12 @@ isequal:
     loadl   r12,#0xdeadbeef
 jumptarget:
     loadl   r12,#0xabacadab
-    ; specials, opcode 15
     ; pop and push
     loadl   sp,#stack+4*4       ; 0x410
     push    r2                  ; contains 1
     move    r2,r0,r0
     pop     r2
-    ; setxxx
+    ; setxxx are actually macros using the setbra instruction
     load    flags,#alu_tst
     alu     r0,r0,r0            ; sets z=1, n=0
     setne   r2                  ; r2 <- 0

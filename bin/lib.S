@@ -12,13 +12,44 @@
 	jal 0,link,0
 #end
 
-#define sub z,x,y
-	load aluop,#alu_sub
-	alu ${z},${x},${y}
+#define bra x
+	setbra r0,${x}
 #end
 
-#define mul16 z,x,y
-	load aluop,#alu_mul16
+#define beq x
+	setbeq r0,${x}
+#end
+
+#define bne x
+	setbne r0,${x}
+#end
+
+#define brp x
+	setbrp r0,${x}
+#end
+
+#define brm x
+	setbrm r0,${x}
+#end
+
+#define seteq x
+	setbeq ${x}, None
+#end
+
+#define setne x
+	setbne ${x}, None
+#end
+
+#define setpos x
+	setbrp ${x}, None
+#end
+
+#define setmin x
+	setbrm ${x}, None
+#end
+
+#define sub z,x,y
+	load aluop,#alu_sub
 	alu ${z},${x},${y}
 #end
 

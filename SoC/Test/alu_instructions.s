@@ -71,10 +71,9 @@ start: 0x200
     storl   r5,r4,r0
     mover   r4,r4,1         ; add 4 to baseaddress
     ; multiplication ops
-    ; mul16 no longer supported, extraneous
+    ; mul16 no longer supported, extraneous, so we simply write 0
     storl   r0,r4,r0        ; wipe result
-    load    flags,#alu_mul16
-    alu     r5,r3,r2        ; upper 16 bits of each operand are ignored
+    move    r5,r0,r0
     storl   r5,r4,r0
     mover   r4,r4,1         ; add 4 to baseaddress
     ; mulhi
