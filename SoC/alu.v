@@ -43,25 +43,6 @@
 	wire shiftlo   = doshift & ~nshift[4];	// true if shifting < 16 bits
 	wire shifthi   = doshift &  nshift[4];	// true if shifting >= 16 bits
 
-	// determine power of two
-	/* wire shiftla0  = nshift[3:0]  == 4'd0;	// 2^0 = 1
-	wire shiftla1  = nshift[3:0]  == 4'd1;	// 2^1 = 2
-	wire shiftla2  = nshift[3:0]  == 4'd2;	// 2^2 = 3
-	wire shiftla3  = nshift[3:0]  == 4'd3;	// ... etc 
-	wire shiftla4  = nshift[3:0]  == 4'd4;
-	wire shiftla5  = nshift[3:0]  == 4'd5;
-	wire shiftla6  = nshift[3:0]  == 4'd6;
-	wire shiftla7  = nshift[3:0]  == 4'd7;
-	wire shiftla8  = nshift[3:0]  == 4'd8;
-	wire shiftla9  = nshift[3:0]  == 4'd9;
-	wire shiftla10 = nshift[3:0]  == 4'd10;
-	wire shiftla11 = nshift[3:0]  == 4'd11;
-	wire shiftla12 = nshift[3:0]  == 4'd12;
-	wire shiftla13 = nshift[3:0]  == 4'd13;
-	wire shiftla14 = nshift[3:0]  == 4'd14;
-	wire shiftla15 = nshift[3:0]  == 4'd15;
-	*/
-
 	wire shiftla0  = ~nshift[3] & ~nshift[2] & ~nshift[1] & ~nshift[0];
 	wire shiftla1  = ~nshift[3] & ~nshift[2] & ~nshift[1] &  nshift[0];
 	wire shiftla2  = ~nshift[3] & ~nshift[2] &  nshift[1] & ~nshift[0];
@@ -114,7 +95,6 @@
 				shiftq  ? mult64[31:0] :
 				shiftqr ? mult64[63:32] :
 
-				op[4:0] == 16 ? {16'b0, mult_al_bl} :
 				op[4:0] == 17 ? mult64[31:0] :
 				op[4:0] == 18 ? mult64[63:32] :
 				33'b0;
