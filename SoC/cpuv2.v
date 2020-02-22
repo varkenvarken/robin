@@ -102,6 +102,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
 	wire [31:0] ip1 = {{(32-addr_width){1'b0}},ip+1};  // incremented program counter, just for the addressable bits
+	wire [31:0] ip2 = {{(32-addr_width){1'b0}},ip+2};  // pc + 2, just for the addressable bits
 
 	reg pop;
 	reg alu, div, div_go;
@@ -259,7 +260,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												loadb3 <= 1;
 												loadb2 <= 1;
 												mem_raddr <= r[15];
-												r[15] <= r[15] + 2;
+												r[15] <= ip2;
 												r[R1] <= takebranch; // R1 because R2 decodes the condition
 											end
 								CMD_JUMP:	begin
