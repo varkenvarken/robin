@@ -102,7 +102,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
 
-	reg pop, push;
+	reg pop;
 	reg alu, div, div_go;
 	reg loadb3, loadb2, loadb1, loadb0;
 	reg branch, movereg;
@@ -158,7 +158,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			state <= HALT;
 			instruction <= 0; // this will clear haltinstruction
 		end else
-		case(state)
+		case(state) // parallel_case
 			FETCH1	:	begin
 							r[0] <= 0;
 							r[1] <= 1;
@@ -185,7 +185,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							alu <= 0;
 							div <= 0;
 							pop <= 0;
-							push <= 0;
 							loadb3 <= 0;
 							loadb2 <= 0;
 							loadb1 <= 0;
