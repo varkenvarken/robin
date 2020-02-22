@@ -101,6 +101,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	localparam HALT			= 15;
 
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
+	wire [31:0] ip1 = {{(32-addr_width){1'b0}},ip+1};  // incremented program counter, just for the addressable bits
 
 	reg pop;
 	reg alu, div, div_go;
@@ -161,7 +162,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			FETCH2	:	state <= FETCH3;
 			FETCH3	:	begin
 							instruction[15:8] <= mem_data_out;
-							r[15] <= r[15] + 1;
+							r[15] <= ip1;
 							state <= FETCH4;
 						end
 			FETCH4	:	begin
@@ -171,7 +172,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			FETCH5	:	state <= FETCH6;
 			FETCH6	:	begin
 							instruction[7:0] <= mem_data_out;
-							r[15] <= r[15] + 1;
+							r[15] <= ip1;
 							div_go <= 0;
 							state <= DECODE;
 							alu <= 0;
