@@ -109,6 +109,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	reg loadb3, loadb2, loadb1, loadb0;
 	reg branch, movereg;
 	reg storb3, storb2, storb1, storb0;
+	reg loadli;
 
 	wire [3:0] cmd = instruction[15:12]; // main opcode
 	wire [3:0] R2  = instruction[11: 8]; // destination register
@@ -189,6 +190,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							storb2 <= 0;
 							storb1 <= 0;
 							storb0 <= 0;
+							loadli <= 0;
 						end
 			DECODE	:	begin
 							state <= EXEC1;
@@ -229,8 +231,9 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												loadb2 <= 1;
 												loadb1 <= 1;
 												loadb0 <= 1;
+												loadli <= 1;
 												mem_raddr <= r[15];
-												r[15] <= r[15] + 4;
+												r[15] <= ip2;  // we increment the pc in two steps to save on LUTs needed for adder
 											end
 								CMD_STORB:	begin
 												storb3 <= 1;
@@ -295,6 +298,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								end
 							end
 							if(storb3) mem_data_in <= storb2 ? r[R2][31:24] : r[R2][7:0] ; // first mem_waddr is set in DECODE step already
+							if(loadli) r[15] <= ip2; // we increment the pc in two steps to save on LUTs needed for adder
 						end
 			EXEC2	:	begin
 							state <= FETCH1;
