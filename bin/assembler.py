@@ -298,12 +298,12 @@ def assemble(lines, debug=False):
         'pc': 15, 'PC': 15, 'sp': 14, 'SP': 14, 'flags': 13, 'FLAGS': 13, 'aluop': 13, 'ALUOP': 13,
         'link': 12, 'LINK': 12, 'FRAME': 11, 'frame': 11,
         # predefined labels for alu operations, lower case only
-        'alu_add': 0, 'alu_adc': 1, 'alu_sub': 2, 'alu_sbc': 3,
-        'alu_and': 5, 'alu_or': 4, 'alu_xor': 7, 'alu_not': 6,
+        'alu_add': 0, 'alu_sub': 1,
+        'alu_and': 4, 'alu_or': 5, 'alu_xor': 6, 'alu_not': 7,
         'alu_cmp': 8, 'alu_tst': 9,
         'alu_shiftl': 12, 'alu_shiftr': 13,
-        'alu_mullo': 17, 'alu_mulhi': 18,
-        'alu_divu': 32, 'alu_divs': 33, 'alu_remu': 34, 'alu_rems': 35,
+        'alu_mullo': 14, 'alu_mulhi': 15,
+        'alu_divu': 16, 'alu_divs': 17, 'alu_remu': 18, 'alu_rems': 19,
     }
 
     labels = dict(predefined)

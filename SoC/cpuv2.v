@@ -43,7 +43,8 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	// alu
 	wire [31:0] alu_a = r[R1];
 	wire [31:0] alu_b = r[R0];
-	wire [7:0] alu_op = r[13][7:0];
+	wire [3:0] alu_op = r[13][3:0];
+	wire multicycle   = r[13][4];
 	wire [31:0] alu_c;
 	wire alu_is_zero;
 	wire alu_is_negative;
@@ -197,7 +198,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							case(cmd)
 								CMD_MOVEP:	movereg <= 1;
 								CMD_ALU:	begin
-												if(alu_op[5]) begin 
+												if(multicycle) begin 
 													div_go <= 1; // start the divider module if we have a divider operation
 													div <= 1;
 												end	else

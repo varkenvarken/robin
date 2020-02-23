@@ -20,11 +20,24 @@
  module alu(
 	input [31:0] a,
 	input [31:0] b,
-	input [7:0] op,
+	input [3:0] op,
 	output [31:0] c,
 	output is_zero,
 	output is_negative
 	);
+
+	localparam OP_ADD			= 0;
+	localparam OP_SUB			= 1;
+	localparam OP_AND			= 4;
+	localparam OP_OR			= 5;
+	localparam OP_XOR			= 6;
+	localparam OP_NOT			= 7;
+	localparam OP_CMP			= 8;
+	localparam OP_TEST			= 9;
+	localparam OP_SHIFTLEFT		= 12;
+	localparam OP_SHIFTRIGHT	= 13;
+	localparam OP_MULLO			= 14;
+	localparam OP_MULHI			= 15;
 
 	wire [31:0] add = a + b;
 	wire [31:0] sub = a - b;
@@ -32,11 +45,11 @@
 	wire [31:0] b_or  = a | b;
 	wire [31:0] b_xor = a ^ b;
 	wire [31:0] b_not = ~a;
-	wire [31:0] min_a = -a;
+	wire [31:0] min_a = -a; // even though it is not used, removing this will *add* 150 LUTs!
 	wire [31:0] cmp = sub[31] ? 32'hffff_ffff : sub == 0 ? 0 : 1;
 
-	wire shiftq    = op[4:0] == 12;		// true if operaration is shift left
-	wire shiftqr   = op[4:0] == 13;		// true if operaration is shift right
+	wire shiftq    = op == OP_SHIFTLEFT;		// true if operaration is shift left
+	wire shiftqr   = op == OP_SHIFTRIGHT;		// true if operaration is shift right
 	wire doshift   = shiftq | shiftqr;
 	wire [5:0] invertshift = 6'd32 - {1'b0,b[4:0]};
 	wire [4:0] nshift = shiftqr ? invertshift[4:0] : b[4:0];
@@ -81,22 +94,22 @@
 				       + {16'b0,mult_ah_bl,16'b0} + {mult_ah_bh,32'b0};
 
 	assign c = 
-				op[4:0] == 0 ? add :
-				op[4:0] == 2 ? sub :
-				
-				op[4:0] == 4 ? b_or :
-				op[4:0] == 5 ? b_and :
-				op[4:0] == 6 ? b_not :
-				op[4:0] == 7 ? b_xor :
+				op == OP_ADD ? add :
+				op == OP_SUB ? sub :
 
-				op[4:0] == 8 ? cmp :
-				op[4:0] == 9 ? a :
+				op == OP_OR ? b_or :
+				op == OP_AND ? b_and :
+				op == OP_NOT ? b_not :
+				op == OP_XOR ? b_xor :
+
+				op == OP_CMP ? cmp :
+				op == OP_TEST ? a :
 
 				shiftq  ? mult64[31:0] :
 				shiftqr ? mult64[63:32] :
 
-				op[4:0] == 17 ? mult64[31:0] :
-				op[4:0] == 18 ? mult64[63:32] :
+				op == OP_MULLO ? mult64[31:0] :
+				op == OP_MULHI ? mult64[63:32] :
 				33'b0;
 
 	assign is_zero = (c == 0);
