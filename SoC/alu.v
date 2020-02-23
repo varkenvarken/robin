@@ -17,7 +17,7 @@
  * limitations under the License. 
  */
  
- module alu(
+module alu(
 	input [31:0] a,
 	input [31:0] b,
 	input [3:0] op,
@@ -53,6 +53,8 @@
 	wire doshift   = shiftq | shiftqr;
 	wire [5:0] invertshift = 6'd32 - {1'b0,b[4:0]};
 	wire [4:0] nshift = shiftqr ? invertshift[4:0] : b[4:0];
+	wire shiftnull = (doshift & (|b[31:5])); // shift amount >= 32
+	wire shiftid   = (doshift & ~(|b[5:0])); // shift amount == 0
 	wire shiftlo   = doshift & ~nshift[4];	// true if shifting < 16 bits
 	wire shifthi   = doshift &  nshift[4];	// true if shifting >= 16 bits
 
@@ -103,10 +105,10 @@
 				op == OP_XOR ? b_xor :
 
 				op == OP_CMP ? cmp :
-				op == OP_TEST ? a :
+				(op == OP_TEST | shiftid)? a :
 
-				shiftq  ? mult64[31:0] :
-				shiftqr ? mult64[63:32] :
+				shiftq  & ~shiftnull & ~shiftid? mult64[31:0] :
+				shiftqr & ~shiftnull & ~shiftid? mult64[63:32] :
 
 				op == OP_MULLO ? mult64[31:0] :
 				op == OP_MULHI ? mult64[63:32] :
