@@ -184,7 +184,8 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			FETCH3	:	begin
 							instruction[15:8] <= mem_data_out;
 							r[15] <= ip1;
-							state <= FETCH4;
+							mem_raddr <= ip1; // we can already assign new read address
+							state <= FETCH5;  // and skip a wait state
 						end
 			FETCH4	:	begin
 							mem_raddr <= ip;

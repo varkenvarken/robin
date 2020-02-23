@@ -351,8 +351,9 @@ class Monitor(cmd.Cmd):
         count = 0
         alias = {0: '0', 1: '1', 2: 'R2', 3: 'R3', 4: 'R4', 5: 'R5', 6: 'R6', 7: 'R7',
                  8: 'R8', 9: 'R9', 10: 'R10', 11: 'R11', 12: 'LINK', 13: 'FLAG', 14: 'SP', 15: 'PC'}
-        aluop = {0: 'add', 1: 'adc', 2: 'sub', 3: 'sbc', 4: 'or', 5: 'and', 6: 'not', 7: 'xor', 8: 'cmp',
-                 9: 'tst', 12: '<<', 13: '>>', 16: 'mulw', 17: 'mulllo', 18: 'mullhi'}
+        aluop = {0: 'add', 1: 'sub', 4: 'or', 5: 'and', 6: 'xor', 7: 'not', 8: 'cmp',
+                 9: 'tst', 12: '<<', 13: '>>', 14: 'mulllo', 15: 'mullhi',
+                 16: 'divu', 17: 'divs', 18: 'remu', 19: 'rems'}
         while self.ser.in_waiting:
             ret = self.ser.read(self.ser.in_waiting)
             w = 0
