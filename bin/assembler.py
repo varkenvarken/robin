@@ -249,6 +249,8 @@ opcode_list = [
            implied=0xffff),
     Opcode(name='MOVER', desc='MOVE R2 <- R1+extend(4*r0)',
            regsidx=0x30),
+    Opcode(name='MARK', desc='R2 <- counter',
+           register=0xb0, cmd=0),
 
     Opcode(name='SETBRA', desc='R1 <- 1; Branch always',
            setbra=0x5c),

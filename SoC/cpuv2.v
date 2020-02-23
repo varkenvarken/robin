@@ -17,6 +17,8 @@
  * limitations under the License. 
  */
 
+`define COUNTER
+
 module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, mem_ready, start_address, reset, halt, halted);
 	parameter addr_width = 9;
 	input clk;
@@ -37,10 +39,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 	// special registers
 	reg [15:0] instruction;
+`ifdef COUNTER
+	reg [31:0] counter;
+`endif
 
-	reg [addr_width-1:0] mem_waddr_next;
-
-	// alu
+	// alu (combinatorial)
 	wire [31:0] alu_a = r[R1];
 	wire [31:0] alu_b = r[R0];
 	wire [3:0] alu_op = r[13][3:0];
@@ -101,10 +104,12 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	localparam EXEC8		= 14;
 	localparam HALT			= 15;
 
+	// instruction pointer
 	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
 	wire [31:0] ip1 = {{(32-addr_width){1'b0}},ip+1};  // incremented program counter, just for the addressable bits
 	wire [31:0] ip2 = {{(32-addr_width){1'b0}},ip+2};  // pc + 2, just for the addressable bits
 
+	// decoded signals
 	reg pop;
 	reg alu, div, div_go;
 	reg loadb3, loadb2, loadb1, loadb0;
@@ -112,6 +117,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	reg storb3, storb2, storb1, storb0;
 	reg loadli;
 
+	// instruction fields
 	wire [3:0] cmd = instruction[15:12]; // main opcode
 	wire [3:0] R2  = instruction[11: 8]; // destination register
 	wire [3:0] R1  = instruction[ 7: 4]; // source register 1
@@ -125,9 +131,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	wire [31:0] branchtarget = r[15] + relative;
 	wire takebranch = ((r[13][31:29] & instruction[10:8]) == ({3{instruction[11]}} & instruction[10:8]));
 
+	// addressing
 	wire [31:0] sumr1r0 = r[R1] + r[R0];
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
 
+	// opcodes
 	localparam CMD_MOVEP   =  0;
 	localparam CMD_POP     =  1;
 	localparam CMD_ALU     =  2;
@@ -139,8 +147,18 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	localparam CMD_STORB   =  8;
 	localparam CMD_PUSH    =  9;
 	localparam CMD_STORL   = 10;
+`ifdef COUNTER
+	localparam CMD_MARK    = 11;
+`endif
 	localparam CMD_LOADI   = 12;
 	localparam CMD_JUMP    = 14;
+	localparam CMD_HALT    = 15;
+
+`ifdef COUNTER
+	always @(posedge clk) begin
+		counter <= counter + 1;
+	end
+`endif
 
 	always @(posedge clk) begin
 		mem_write <= 0;
@@ -272,6 +290,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												r[15] <= sumr1r0;
 												state <= FETCH1;
 											end
+`ifdef COUNTER
+								CMD_MARK:	begin
+												r[R2] <= counter;
+											end
+`endif
 								default: state <= FETCH1;
 							endcase
 						end

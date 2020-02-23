@@ -58,6 +58,7 @@ class environment:
     def initcpu(self, address):
         self.R = [0] * 16
         self.R[15] = address
+        self.counter = 12345
 
     def memcontent(self, addr):
         return (self.mem[addr] << 24) | (self.mem[addr+1] << 16) | (self.mem[addr+2] << 8) | (self.mem[addr+3])
@@ -72,6 +73,7 @@ class environment:
 
         try:
             while True:
+                self.counter += 1
                 self.R[0] = 0
                 self.R[1] = 1
                 self.R[13] |= 0x80000000  # always on bit
@@ -185,6 +187,9 @@ class environment:
         self.mem[offset+1] = (self.R[r2] >> 16) & 0xff
         self.mem[offset+2] = (self.R[r2] >> 8) & 0xff
         self.mem[offset+3] = (self.R[r2]) & 0xff
+
+    def op11(self, r2, r1, r0, addr):  # mark , note: counter does not actually count clock cycles!
+        self.R[r2] = self.counter
 
     def op12(self, r2, r1, r0, addr):  # loadi (load byte immediate)
         # print('loadi %d,%d,%d'%(r2,r1,r0))
