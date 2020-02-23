@@ -45,7 +45,7 @@
 	wire [31:0] b_or  = a | b;
 	wire [31:0] b_xor = a ^ b;
 	wire [31:0] b_not = ~a;
-	wire [31:0] min_a = -a; // even though it is not used, removing this will *add* 150 LUTs!
+	wire [31:0] min_a = -a; // even though it is not used, removing this will *add* 50 LUTs!
 	wire [31:0] cmp = sub[31] ? 32'hffff_ffff : sub == 0 ? 0 : 1;
 
 	wire shiftq    = op == OP_SHIFTLEFT;		// true if operaration is shift left

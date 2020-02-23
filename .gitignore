@@ -15,3 +15,5 @@
 /SoC/Test/all_instructions.bin
 /SoC/Test/test.out
 /SoC/Test/alu_instructions.bin
+/SoC/Test/shift_instructions.bin
+/SoC/Test/shift_instructions2.bin
