@@ -180,19 +180,16 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							mem_raddr <= ip;
 							state <= halted ? FETCH1 : FETCH2;
 						end
-			FETCH2	:	state <= FETCH3;
-			FETCH3	:	begin
-							instruction[15:8] <= mem_data_out;
-							r[15] <= ip1;
+			FETCH2	:	begin
+							state <= FETCH3;  // there need to be two clock cycles between loading the mem_raddr and reading mem_data_out
+							r[15] <= ip1;     // but then we can update and read every new clock cycle
 							mem_raddr <= ip1; // we can already assign new read address
-							state <= FETCH5;  // and skip a wait state
+							end
+			FETCH3	:	begin                 // we pssoib
+							instruction[15:8] <= mem_data_out;
+							state <= FETCH4;
 						end
 			FETCH4	:	begin
-							mem_raddr <= ip;
-							state <= FETCH5;
-						end
-			FETCH5	:	state <= FETCH6;
-			FETCH6	:	begin
 							instruction[7:0] <= mem_data_out;
 							r[15] <= ip1;
 							div_go <= 0;
