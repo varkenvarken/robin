@@ -212,7 +212,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			DECODE	:	begin
 							state <= EXEC1;
 							case(cmd)
-								CMD_MOVEP:	movereg <= 1;
+								CMD_MOVEP:	begin
+												r[R2] <= sumr1r0;
+												state <= FETCH1;
+											end
 								CMD_ALU:	begin
 												if(multicycle) begin 
 													div_go <= 1; // start the divider module if we have a divider operation
@@ -299,10 +302,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			EXEC1	:	begin
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
-							if (movereg) begin
-								r[R2] <= sumr1r0;
-								state <= FETCH1;
-							end
 							if (alu) begin
 								r[R2] <= alu_c;
 								r[13][29] <= alu_is_zero;
