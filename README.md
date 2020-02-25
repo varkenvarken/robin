@@ -1,10 +1,18 @@
 # robin
 SoC design targeted at the iCEbreaker board
 
-![Python files](https://github.com/varkenvarken/robin/workflows/Python%20files/badge.svg) Main python files pass pep8
+![Python files](https://github.com/varkenvarken/robin/workflows/Python%20files/badge.svg) ![Simulations](https://github.com/varkenvarken/robin/workflows/Simulations/badge.svg) ![Libraries](https://github.com/varkenvarken/robin/workflows/Libraries/badge.svg)
 
-![Libraries](https://github.com/varkenvarken/robin/workflows/Libraries/badge.svg) libc examples can be compiled, assembled and simulated with correct results
+## Components
 
-![Simulations](https://github.com/varkenvarken/robin/workflows/Simulations/badge.svg) all instructions can be simulated correctly in the simulator
+The Robin SoC consists of several components, each document on their own wiki page
 
-(that last bit does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub)
+* The SoC/CPU itself ([Hardware definition files](https://github.com/varkenvarken/robin/tree/master/SoC) in Verilog)
+* A [monitor program](https://github.com/varkenvarken/robin/wiki/Monitor), to interact with the hardware
+* An [assembler](https://github.com/varkenvarken/robin/wiki/Assembler), to compile assembly to binary files
+* A [compiler](https://github.com/varkenvarken/robin/wiki/Compiler), to convert a C-like language to assembly
+* A [simulator](https://github.com/varkenvarken/robin/wiki/Simulator), to simulate running binary programs 
+
+## About test results
+
+The badges indicate if main python files pass pep8, all instructions can be simulated correctly in the simulator and libc examples can be compiled, assembled and simulated with correct results. That does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
