@@ -26,7 +26,7 @@ himem.bin: $(LIB) himem.s
 	$(ASSEMBLER) -i $^ > $@
 
 speedtest.bin: $(LIB) speedtest.s
-	$(ASSEMBLER) -i $^ > $@
+	$(ASSEMBLER) $^ > $@
 
 clean:
 	rm -f *.bin *.hex *.out
@@ -71,7 +71,7 @@ testhard:
 	$(MONITOR) -b115200 -i -x shift_instructions.cmd
 	$(MONITOR) -b115200 -i -x himem.cmd
 
-testspeed:
+testspeed: speedtest.bin speedtest.cmd
 	$(MONITOR) -b115200 -i -x speedtest.cmd
 
 .PHONY: all clean test testhard testspeed

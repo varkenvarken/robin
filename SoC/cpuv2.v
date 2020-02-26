@@ -220,8 +220,12 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												if(multicycle) begin 
 													div_go <= 1; // start the divider module if we have a divider operation
 													div <= 1;
-												end	else
-													alu <= 1;
+												end	else begin
+													r[R2] <= alu_c;
+													r[13][29] <= alu_is_zero;
+													r[13][30] <= alu_is_negative;
+													state <= FETCH1;
+												end
 											end
 								CMD_POP:	begin
 												mem_raddr <= r[14];
@@ -302,12 +306,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			EXEC1	:	begin
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
-							if (alu) begin
-								r[R2] <= alu_c;
-								r[13][29] <= alu_is_zero;
-								r[13][30] <= alu_is_negative;
-								state <= FETCH1;
-							end
 							if (div) begin // a divider operation (multiple cycles)
 								if(div_is_available) begin
 									r[R2] <= div_c;
