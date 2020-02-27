@@ -111,9 +111,9 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 	// decoded signals
 	reg pop;
-	reg alu, div, div_go;
+	reg div, div_go;
 	reg loadb3, loadb2, loadb1, loadb0;
-	reg branch, movereg;
+	reg branch;
 	reg storb3, storb2, storb1, storb0;
 	reg loadli;
 
@@ -194,7 +194,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							r[15] <= ip1;
 							div_go <= 0;
 							state <= DECODE;
-							alu <= 0;
 							div <= 0;
 							pop <= 0;
 							loadb3 <= 0;
@@ -202,7 +201,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							loadb1 <= 0;
 							loadb0 <= 0;
 							branch <= 0;
-							movereg <= 0;
 							storb3 <= 0;
 							storb2 <= 0;
 							storb1 <= 0;
