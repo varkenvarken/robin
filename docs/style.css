@@ -1,1 +1,2 @@
-li.todo a{color:#888888;}
+li.todo a{color:#888888; list-style-type:none;}
+li.todo::before {content: "TODO: "}
