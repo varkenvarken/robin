@@ -260,10 +260,14 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								CMD_STORB:	begin
 												storb3 <= 1;
 												mem_waddr <= sumr1r0_addr;
+												mem_data_in <= r[R2][7:0];
+												mem_write <= 1;
 											end
 								CMD_PUSH:	begin
 												r[14] <= r[14] - 4;
 												mem_waddr <= r[14] - 4;
+												mem_data_in <= r[R2][31:24];
+												mem_write <= 1;
 												storb3 <= 1;
 												storb2 <= 1;
 												storb1 <= 1;
@@ -275,6 +279,8 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												storb1 <= 1;
 												storb0 <= 1;
 												mem_waddr <= sumr1r0_addr;
+												mem_data_in <= r[R2][31:24];
+												mem_write <= 1;
 											end
 								CMD_LOADI:	begin
 												r[R2][7:0] <= immediate;
@@ -317,7 +323,15 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								end
 							end
 
-							if(storb3) mem_data_in <= storb2 ? r[R2][31:24] : r[R2][7:0] ; // first mem_waddr is set in DECODE step already
+							if(storb3 & ~storb2) begin
+								mem_write <= 1;
+								state <= FETCH1;
+							end
+							if(storb2) begin
+								mem_waddr <= mem_waddr + 1;
+								mem_data_in <= r[R2][23:16];
+								mem_write <= 1;
+							end
 
 							if(loadli) r[15] <= ip2; // we increment the pc in two steps to save on LUTs needed for adder
 						end
@@ -330,7 +344,9 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC3;
 							end
 
-							if(storb3) begin
+							if(storb1) begin
+								mem_waddr <= mem_waddr + 1;
+								mem_data_in <= r[R2][15:8];
 								mem_write <= 1;
 								state <= EXEC3;
 							end
@@ -348,12 +364,13 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24]; // a single byte load, not a long
 
-							if(storb2) begin
+							if(storb0) begin
 								mem_waddr <= mem_waddr + 1;
-								mem_data_in <= r[R2][23:16];
+								mem_data_in <= r[R2][7:0];
+								mem_write <= 1;
 								state <= EXEC4;
 							end
-							if(storb3 & ~storb2) state <= FETCH1;
+
 						end
 			EXEC4	:	begin
 							state <= FETCH1;
@@ -365,9 +382,8 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
 
-							if(storb2) begin
+							if(storb0) begin
 								mem_write <= 1;
-								state <= EXEC5;
 							end
 						end
 			EXEC5	:	begin
@@ -378,32 +394,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								r[R2][7:0] <= mem_data_out;
 							end
 
-							if(storb1) begin
-								mem_waddr <= mem_waddr + 1;
-								mem_data_in <= r[R2][15:8];
-								state <= EXEC6;
-							end
-						end
-			EXEC6	:	begin
-							state <= FETCH1;
-
-							if(storb1) begin
-								mem_write <= 1;
-								state <= EXEC7;
-							end
-						end
-			EXEC7	:	begin
-							state <= FETCH1;
-							if(storb0) begin
-								mem_waddr <= mem_waddr + 1;
-								mem_data_in <= r[R2][7:0];
-								state <= EXEC8;
-							end
-						end
-			EXEC8	:	begin
-							state <= FETCH1;
-
-							if(storb0) mem_write <= 1;
 						end
 			HALT	:	begin
 							halted <= 1;
