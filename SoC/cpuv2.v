@@ -302,8 +302,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							endcase
 						end
 			EXEC1	:	begin
+							mem_raddr <= mem_raddr + 1;
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
+
 							if (div) begin // a divider operation (multiple cycles)
 								if(div_is_available) begin
 									r[R2] <= div_c;
@@ -314,26 +316,38 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 									state <= EXEC1; 
 								end
 							end
+
 							if(storb3) mem_data_in <= storb2 ? r[R2][31:24] : r[R2][7:0] ; // first mem_waddr is set in DECODE step already
+
 							if(loadli) r[15] <= ip2; // we increment the pc in two steps to save on LUTs needed for adder
 						end
 			EXEC2	:	begin
+							mem_raddr <= mem_raddr + 1;
 							state <= FETCH1;
+
 							if(loadb3) begin
 								temp[31:24] <= mem_data_out;
-								mem_raddr <= mem_raddr + 1;
 								state <= EXEC3;
 							end
+
 							if(storb3) begin
 								mem_write <= 1;
 								state <= EXEC3;
 							end
+
 							if(pop) r[14] <= r[14] + 4; // no need to set state because loadb3 will also have been set
 						end
 			EXEC3	:	begin
+							mem_raddr <= mem_raddr + 1;
 							state <= FETCH1;
-							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24];
-							if(loadb2) state <= EXEC4;
+
+							if(loadb2) begin
+								temp[23:16] <= mem_data_out;
+								state <= EXEC4;
+							end
+
+							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24]; // a single byte load, not a long
+
 							if(storb2) begin
 								mem_waddr <= mem_waddr + 1;
 								mem_data_in <= r[R2][23:16];
@@ -343,11 +357,14 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC4	:	begin
 							state <= FETCH1;
-							if(loadb2) begin
-								temp[23:16] <= mem_data_out;
-								mem_raddr <= mem_raddr + 1;
+
+							if(loadb1) begin
+								temp[15:8] <= mem_data_out;
 								state <= EXEC5;
 							end
+
+							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
+
 							if(storb2) begin
 								mem_write <= 1;
 								state <= EXEC5;
@@ -355,7 +372,12 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC5	:	begin
 							state <= FETCH1;
-							if(loadb1|branch) state <= EXEC6;
+
+							if(loadb0) begin
+								r[R2][31:8] <= temp[31:8];
+								r[R2][7:0] <= mem_data_out;
+							end
+
 							if(storb1) begin
 								mem_waddr <= mem_waddr + 1;
 								mem_data_in <= r[R2][15:8];
@@ -364,12 +386,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC6	:	begin
 							state <= FETCH1;
-							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
-							if(loadb1) begin
-								temp[15:8] <= mem_data_out;
-								mem_raddr <= mem_raddr + 1;
-								state <= EXEC7;
-							end
+
 							if(storb1) begin
 								mem_write <= 1;
 								state <= EXEC7;
@@ -377,7 +394,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC7	:	begin
 							state <= FETCH1;
-							if(loadb0) state <= EXEC8;
 							if(storb0) begin
 								mem_waddr <= mem_waddr + 1;
 								mem_data_in <= r[R2][7:0];
@@ -386,10 +402,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC8	:	begin
 							state <= FETCH1;
-							if(loadb0) begin
-								r[R2][31:8] <= temp[31:8];
-								r[R2][7:0] <= mem_data_out;
-							end
+
 							if(storb0) mem_write <= 1;
 						end
 			HALT	:	begin
