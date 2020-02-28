@@ -28,7 +28,7 @@
 <div class="w3-container">
 	<h2>Fields and special registers</h2>
   <p>The opcodes for our instructions come in a few different formats</p>
-  <table class="items">
+  <table class="listing">
     <tr><td>bytes</td><td>fields</td><td></td><td></td><td></td></tr>
     <tr><td>2</td><td>opcode,R2,R1,R0</td><td></td><td></td><td>MOVE, ALU, LOAD, LOADL, STOR, STORL, JAL</td></tr>
     <tr><td>2</td><td>opcode,R2,R1,n</td><td></td><td></td><td>MOVER</td></tr>
@@ -44,7 +44,7 @@
   <p><code>MOVE r5,r5,r1</code> would add 1 to the value in register 5 and store the result in r5 again.</p>
   <p>Also, because register 15 is the program counter (PC) we could jump to an address with <code>LOADIL r15,#address</code></p>
   <p>The full list of registers is shown below</p>
-  <table class="items">
+  <table class="listing">
   <tr><td>0</td><td>zero</td><td>value always 0</td></tr>
   <tr><td>1</td><td>one</td><td>value always 1</td></tr>
   <tr><td>2</td><td>r2/arg1</td><td>general purpose (ABI: arg1)</td></tr>
