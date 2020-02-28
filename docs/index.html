@@ -11,10 +11,10 @@
     
 <div class="w3-sidebar w3-bar-block w3-collapse w3-card w3-animate-right w3-xxlarge" style="width:200px;right:0;" id="mySidebar">
   <button class="w3-bar-item w3-button w3-large w3-hide-large w3-xxlarge my-hover-purple fas fa-times" onclick="w3_close()"> </button>
-  <a href="https://varkenvarken.github.io/robin/" class="w3-bar-item w3-button my-hover-purple fas fa-home"></a>
-  <a href="https://github.com/varkenvarken/robin/wiki" class="w3-bar-item w3-button my-hover-purple fas fa-globe"></a>
-  <a href="https://fpga.michelanders.nl/" class="w3-bar-item w3-button my-hover-purple fab fa-blogger"></a>
-  <a href="https://github.com/varkenvarken/robin" class="w3-bar-item w3-button my-hover-purple fab fa-github"></a>
+  <a href="https://varkenvarken.github.io/robin/" class="w3-bar-item w3-button my-hover-purple fas fa-home"><span class="tooltiptext">Home page</span></a>
+  <a href="https://github.com/varkenvarken/robin/wiki" class="w3-bar-item w3-button my-hover-purple fas fa-globe"><span class="tooltiptext">Wiki</span></a>
+  <a href="https://fpga.michelanders.nl/" class="w3-bar-item w3-button my-hover-purple fab fa-blogger"><span class="tooltiptext">Blog</span></a>
+  <a href="https://github.com/varkenvarken/robin" class="w3-bar-item w3-button my-hover-purple fab fa-github"><span class="tooltiptext">Code</span></a>
 </div>
 
 <div class="w3-main" style="margin-right:200px">
@@ -26,7 +26,7 @@
 </div>
 
 <div class="w3-container">
-	<h2>Articles doumenting the CPU implementation</h2>
+	<h2>Articles documenting the CPU implementation</h2>
 	<ul>
 	<li class="icon inprogress"><a href="Isa_design_decisions.html">Instruction Set Achitecture: design decisions</a></li>
 	<li class="icon todo"><a href="Isa_fields_special_registers.html">Instruction Set Architecture: fields and special registers</a></li>
@@ -50,7 +50,9 @@
 </div>
 
 </div>
-
+<div class="footer my-purple">
+  <p>&copy; 2020 Michel Anders</p>
+</div>
 <script>
 function w3_open() {
   document.getElementById("mySidebar").style.display = "block";

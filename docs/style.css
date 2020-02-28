@@ -178,3 +178,32 @@ li.inprogress::before {  font-family: "Font Awesome 5 Free";
   font-weight: 900;
   content: "\f0ad";
   color:#6d3da5;}
+
+.footer {
+   position: fixed;
+   left: 0;
+   bottom: 0;
+   width: 100%;
+   background-color: red;
+   color: white;
+   text-align: left;
+   padding-left:1em;
+}
+
+.tooltiptext {
+  visibility: hidden;
+  background-color: #6d3da5;
+  color: #fff;
+  text-align: center;
+  margin:auto;
+  padding-left: 15px;
+  font-size:14px; font-family: Vollkorn,serif;
+  /* Fade in tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+a:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
