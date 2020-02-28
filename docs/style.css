@@ -178,6 +178,12 @@ ul.alist li.inprogress::before {  font-family: "Font Awesome 5 Free";
   font-weight: 900;
   content: "\f0ad";
   color:#6d3da5;}
+ul.items li { list-style-type: none; font-size:115%;}
+ul.items li::before { margin-right:6px; 
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  content: "\f08d";
+  color:#6d3da5;}
 
 .footer {
    position: fixed;
@@ -209,4 +215,8 @@ a:hover .tooltiptext {
 }
 
 div.bumper { height:3em;}
-table.listing td {padding-right:1em;}
+table.listing { border-collapse: collapse; border-spacing: 0;}
+table.listing td {padding:0 1em 0 0; border: 0px solid white; margin: 0 0 0 0; }
+table.listing tr:nth-child(odd) {
+  background-color: #f0e0ff;
+}
