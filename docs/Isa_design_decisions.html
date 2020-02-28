@@ -26,18 +26,48 @@
 </div>
 
 <div class="w3-container">
-	<h2>Instruction Set Achitecture: design decisions</h2>
-	<p>Content ,,,,,</p>
-	<p>Some verilog code</p>
-	<pre><code>
-	module verilogsample (a,b,c);
-
-	always @(posedge wclk)
-	begin
-		if (write_en) mem[waddr] <= din;
-	end
-	endmodule
-	</code></pre>
+    <h2>Instruction Set Achitecture: design decisions</h2>
+    <p>The design of <a href="https://github.com/varkenvarken/robin/blob/master/SoC/cpuv2.v">the CPU</a> for the <a href="https://github.com/varkenvarken/robin/tree/master/SoC">Robin SoC<a> is characterized by the following characteristics:</p>
+    <ul>
+    <li>16 32-bit registers</li>
+    <p>Registers take up resources so there is a trade of between the convenience of having lots of general purpose registers and the limited number of LUTs available on an FPGA</p>
+    <li>16 bit instructions</li>
+    <p>If our target FPGA has a small amount of ram, we would like to keep instruction size limited. Most of the instructions refer to three registers. If we have just 16 registers we need 4 bits to encode a reference to a register and with our three operand design that keeps us just within sixteen bits:
+    3 fields of 4 bits, plus 4 bits for the opcode, together make 16 bits.</p>
+    <li>A limited number of instructions</li>
+    <p>The complete list is fairly short:</p>
+    <table class="listing">
+	<tr><td>MOVE</td><td>R2,R1,R0</td><td>R2 &leftarrow; R1 + R0</td></tr>
+	<tr><td>ALU</td><td>R2,R1,R0</td><td>R2 &leftarrow; R1 <i>op</i> R0</td></tr>
+	<tr><td>LOAD</td><td>R2,R1,R0</td><td>R2 &leftarrow; (R1 + R0)</td></tr>
+	<tr><td>LOADL</td><td>R2,R1,R0</td><td>R2 &leftarrow; (R1 + R0)</td></tr>
+	<tr><td>STOR</td><td>R2,R1,R0</td><td>R2 &rightarrow; (R1 + R0)</td></tr>
+	<tr><td>STORL</td><td>R2,R1,R0</td><td>R2 &rightarrow; (R1 + R0)</td></tr>
+	<tr><td>JAL</td><td>R2,R1,R0</td><td>R2 &rightarrow; PS, PC &rightarrow; R1 + R0</td></tr>
+	<tr><td>MOVER</td><td>R2,R1,n</td><td>R2 &leftarrow; R1 + 4 * n</td></tr>
+	<tr><td>SETBRA</td><td>cond,R1</td><td>R1 &leftarrow; cond?1:0, PC += cond? offset + 2: 2</td></tr>
+	<tr><td>LOADI</td><td>R2,n</td><td>R2 &leftarrow; n</td></tr>
+	<tr><td>LOADIL</td><td>R2,n</td><td>R2 &leftarrow; (PC), PC += 4</td></tr>
+	<tr><td>PUSH</td><td>R2</td><td>SP -= 4, (SP) &leftarrow; R2</td></tr>
+	<tr><td>POP</td><td>R2</td><td>(SP) &rightarrow; R2, SP -= 4</td></tr>
+	<tr><td>MARK</td><td>R2</td><td>R2 &leftarrow; counter</td></tr>
+	<tr><td>HALT</td><td></td><td>halt CPU</td></tr>
+    </table>
+    <p>Note the ALU instruction though: the operation it performs is determined by the low byte of the flags register (register 13). This implies that most arithmetical and logical operations are in fact two instructions: one to load the lower byte of the flags register followed by an ALU instruction.</p>
+    <p>We do not have to reload this operation if we want to perform the same operation on multiple set of operands though and addition of two register can be done with MOVE R2,R1,R0 as well.</p>
+    <li>Byte oriented memory access</li>
+    <p>The up5k on the iCEbreaker board has both block ram and single port ram. Both can be configured to address memory as 16 bit words if we want but because we want to address individual bytes quite often and keep the addressing logic as simple as possible, we opt to do all memory access in byte size chunks.</p>
+    <p>Even if we load 4-byte long words, we do this byte for byte. Storage order is big-endian.</p>
+    <li>Load/store architecture</li>
+    <p>As with many risc designs, memory access is mostly limited to load/store. In this implementation for both activities the sum of the two source registers is calculated and used as the memory address. This address is then used to store or load a byte or a word.
+    <li>Memory mapped io</li>
+    <p>We do not have dedicated I/O instructions of any kind. If the CPU is part of a SoC, <a href="https://github.com/varkenvarken/robin/tree/master/SoC">the SoC design</a> will have to implement memory mapped I/O</p>
+    </ul>
+    <h3>Other design properties</h3>
+    <p>The design uses 32-bit words throughout, except for loading and storing bytes. This also means we have no facilities to manipulate 16-bit words whatsoever.</p>
+    <p>Also, originally there were no POP and PUSH instructions. This resulted in every stack operation to consist of two instructions: one LOADL or STORL instruction and an instruction to increment or decrement the register that was used as the stack pointer (typically register 14), for example MOVER r14,r14,1 to add 4 to register 14. This resulted in rather low density code when used with our <a href="https://github.com/varkenvarken/robin/wiki/Compiler">C compiler</a> so dedicated POP and PUSH instructions were implemented.</p>
+    <p>The rather peculiar named SETBRA instructions can be used for two things: to set a register to 1 or 0 depending on a condition being met, or conditionally branch to another location using a 16-bit signed offset. This can even be combined to set a register and branch in one instruction. The Robin CPU provides 3 flags that can be tested: zero and negative, which are both set by ALU operations, and always, which by definition is a flag that is always set. Typically <a href="https://github.com/varkenvarken/robin/wiki/Assembler">an assembler</a> will provided macros to easily implement just a conditional branch or a set register operation with common names.</p> 
+    <div class="bumper"></div>
 </div>
 
 </div>

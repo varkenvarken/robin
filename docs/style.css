@@ -26,7 +26,7 @@ legend{color:inherit;display:table;max-width:100%;padding:0;white-space:normal}t
 [type=search]::-webkit-search-decoration{-webkit-appearance:none}
 ::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}
 /* End extract */
-html,body{font-family:Vollkorn,serif;font-size:15px;line-height:1.5}html{overflow-x:hidden}
+html,body{font-family:Vollkorn,serif;font-size:16px;line-height:1.5}html{overflow-x:hidden}
 h1{font-size:36px}h2{font-size:30px}h3{font-size:24px}h4{font-size:20px}h5{font-size:18px}h6{font-size:16px}.w3-serif{font-family:serif}
 h1,h2,h3,h4,h5,h6{font-family:Nobile,serif;font-weight:400;margin:10px 0}.w3-wide{letter-spacing:4px}
 hr{border:0;border-top:1px solid #eee;margin:20px 0}
@@ -161,20 +161,20 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
   -webkit-font-smoothing: antialiased;
 }
 
-a { text-decoration: none; }
-a:hover { color:#6d3da5; }
-li::before { margin-right:6px; }
-li.todo a {color:#888888; }
-li {list-style-type:none;}
-li.todo::before {  font-family: "Font Awesome 5 Free";
+ul.alist a { text-decoration: none; }
+ul.alist a:hover { color:#6d3da5; }
+ul.alist li::before { margin-right:6px; }
+ul.alist li.todo a {color:#888888; }
+ul.alist li {list-style-type:none;}
+ul.alist li.todo::before {  font-family: "Font Awesome 5 Free";
   font-weight: 400;
   content: "\f111";
   color:#6d3da5;}
-li.done::before {  font-family: "Font Awesome 5 Free";
+ul.alist li.done::before {  font-family: "Font Awesome 5 Free";
   font-weight: 400;
   content: "\f058";
   color:#6d3da5;}
-li.inprogress::before {  font-family: "Font Awesome 5 Free";
+ul.alist li.inprogress::before {  font-family: "Font Awesome 5 Free";
   font-weight: 900;
   content: "\f0ad";
   color:#6d3da5;}
@@ -207,3 +207,6 @@ a:hover .tooltiptext {
   visibility: visible;
   opacity: 1;
 }
+
+div.bumper { height:3em;}
+table.listing td {padding-right:1em;}
