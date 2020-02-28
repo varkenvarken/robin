@@ -28,27 +28,35 @@
 <div class="w3-container">
 	<h2>Fields and special registers</h2>
   <p>The opcodes for our instructions come in a few different formats</p>
-  <table>
+  <table class="items">
     <tr><td>bytes</td><td>fields</td><td></td><td></td><td></td></tr>
     <tr><td>2</td><td>opcode,R2,R1,R0</td><td></td><td></td><td>MOVE, ALU, LOAD, LOADL, STOR, STORL, JAL</td></tr>
     <tr><td>2</td><td>opcode,R2,R1,n</td><td></td><td></td><td>MOVER</td></tr>
     <tr><td>2</td><td>opcode,R2,byte</td><td></td><td></td><td>LOADI</td></tr>
     <tr><td>2</td><td>opcode,R2,X</td><td></td><td></td><td>POP, PUSH, MARK</td></tr>
-    <tr><td>2</td><td>FFFF</td><td></td><td></td><td>HALT</td></tr>
+    <tr><td>2</td><td>F,F,F,F</td><td></td><td></td><td>HALT</td></tr>
     <tr><td>4</td><td>opcode,cond,R1,X</td><td>Offset hi, Offset lo</td><td></td><td>SETBRA</td></tr>
     <tr><td>6</td><td>opcode,R2,R1,R0</td><td>byte 3, byte 2</td><td>byte 2, byte 0</td><td>LOADIL</td></tr>
+  </table><p>All fields are 4 bits wide and X means 'dont care'. n is a 4 bit signed number, i.e can range from -8 to +7</p>
+  <p>The two offset bytes for the SETBRA instruction are a signed 16 but, big endian number.</p>
+  <p>Not all registers are general purpose, in fact because register 0 always contains 0 and register 1 always contains 1 we can do some clever tricks.</p>
+  <p>Combined with the implied addition of the registers indicated in fields R1 and R1 (in format 1) we can for example increment any register.</p>
+  <p><code>MOVE r5,r5,r1</code> would add 1 to the value in register 5 and store the result in r5 again.</p>
+  <p>Also, because register 15 is the program counter (PC) we could jump to an address with <code>LOADIL r15,#address</code></p>
+  <p>The full list of registers is shown below</p>
+  <table class="items">
+  <tr><td>0</td><td>zero</td><td>value always 0</td></tr>
+  <tr><td>1</td><td>one</td><td>value always 1</td></tr>
+  <tr><td>2</td><td>r2/arg1</td><td>general purpose (ABI: arg1)</td></tr>
+  <tr><td>3</td><td>r3/arg2</td><td>general purpose (ABI: arg2)</td></tr>
+  <tr><td>4</td><td>r4/index</td><td>general purpose (ABI: index in frame)</td></tr>
+  <tr><td>5 - 6</td><td>r5 - r10</td><td>general purpose</td></tr>
+  <tr><td>11</td><td>r11/link</td><td>general purpose (ABI: return address)</td></tr>
+  <tr><td>12</td><td>r12/frame</td><td>general purpose (ABI: frame pointer)</td></tr>
+  <tr><td>13</td><td>flags</td><td>flags (bits[31:29]) and alu op (bits[7:0])</td></tr>
+  <tr><td>14</td><td>sp</td><td>stack pointer</td></tr>
+  <tr><td>15</td><td>pc</td><td>program counter</td></tr>
   </table>
-	<p>Not all registers </p>
-	<p>Some verilog code</p>
-	<pre><code>
-	module verilogsample (a,b,c);
-
-	always @(posedge wclk)
-	begin
-		if (write_en) mem[waddr] <= din;
-	end
-	endmodule
-	</code></pre>
 </div>
 
 </div>
