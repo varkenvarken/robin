@@ -1,3 +1,4 @@
-li.todo a{color:#888888; }
+li.todo a, li.inprogress a{color:#888888; }
 li {list-style-type:none;}
 li.todo::before {content: "TODO: "}
+li.inprogress::before {content: "WORK: "}
