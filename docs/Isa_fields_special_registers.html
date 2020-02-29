@@ -28,40 +28,48 @@
 <div class="w3-container">
 	<h2>Fields and special registers</h2>
   <p>The opcodes for our instructions come in a few different formats</p>
-  <table class="listing">
-    <tr><td>bytes</td><td>fields</td><td></td><td></td><td></td></tr>
-    <tr><td>2</td><td>opcode,R2,R1,R0</td><td></td><td></td><td>MOVE, ALU, LOAD, LOADL, STOR, STORL, JAL</td></tr>
-    <tr><td>2</td><td>opcode,R2,R1,n</td><td></td><td></td><td>MOVER</td></tr>
-    <tr><td>2</td><td>opcode,R2,byte</td><td></td><td></td><td>LOADI</td></tr>
-    <tr><td>2</td><td>opcode,R2,X</td><td></td><td></td><td>POP, PUSH, MARK</td></tr>
-    <tr><td>2</td><td>F,F,F,F</td><td></td><td></td><td>HALT</td></tr>
+  <table class="listing header">
+    <tr><td>Bytes</td><td>Fields</td><td></td><td></td><td>Instruction</td></tr>
+    <tr><td>2</td><td>opcode, R2, R1, R0</td><td></td><td></td><td>MOVE, ALU, LOAD, LOADL, STOR, STORL, JAL</td></tr>
+    <tr><td>2</td><td>opcode, R2, R1, n</td><td></td><td></td><td>MOVER</td></tr>
+    <tr><td>2</td><td>opcode, R2, byte</td><td></td><td></td><td>LOADI</td></tr>
+    <tr><td>2</td><td>opcode, R2, X</td><td></td><td></td><td>POP, PUSH, MARK</td></tr>
+    <tr><td>2</td><td>F, F, F, F</td><td></td><td></td><td>HALT</td></tr>
     <tr><td>4</td><td>opcode,cond,R1,X</td><td>Offset hi, Offset lo</td><td></td><td>SETBRA</td></tr>
     <tr><td>6</td><td>opcode,R2,R1,R0</td><td>byte 3, byte 2</td><td>byte 2, byte 0</td><td>LOADIL</td></tr>
   </table><p>All fields are 4 bits wide and X means 'dont care'. n is a 4 bit signed number, i.e can range from -8 to +7</p>
   <p>The two offset bytes for the SETBRA instruction are a signed 16 but, big endian number.</p>
-  <p>Not all registers are general purpose, in fact because register 0 always contains 0 and register 1 always contains 1 we can do some clever tricks.</p>
-  <p>Combined with the implied addition of the registers indicated in fields R1 and R1 (in format 1) we can for example increment any register.</p>
+  <p>Not all registers are general purpose, in fact because register 0 always contains 0 and register 1 always contains 1 we can do some clever tricks. Combined with the implied addition of the registers indicated in fields R1 and R1 (in format 1) we can for example increment any register.</p>
   <p><code>MOVE r5,r5,r1</code> would add 1 to the value in register 5 and store the result in r5 again.</p>
   <p>Also, because register 15 is the program counter (PC) we could jump to an address with <code>LOADIL r15,#address</code></p>
   <p>The full list of registers is shown below</p>
-  <table class="listing">
-  <tr><td>0</td><td>zero</td><td>value always 0</td></tr>
-  <tr><td>1</td><td>one</td><td>value always 1</td></tr>
-  <tr><td>2</td><td>r2/arg1</td><td>general purpose (ABI: arg1)</td></tr>
-  <tr><td>3</td><td>r3/arg2</td><td>general purpose (ABI: arg2)</td></tr>
-  <tr><td>4</td><td>r4/index</td><td>general purpose (ABI: index in frame)</td></tr>
-  <tr><td>5 - 6</td><td>r5 - r10</td><td>general purpose</td></tr>
-  <tr><td>11</td><td>r11/link</td><td>general purpose (ABI: return address)</td></tr>
-  <tr><td>12</td><td>r12/frame</td><td>general purpose (ABI: frame pointer)</td></tr>
-  <tr><td>13</td><td>flags</td><td>flags (bits[31:29]) and alu op (bits[7:0])</td></tr>
-  <tr><td>14</td><td>sp</td><td>stack pointer</td></tr>
-  <tr><td>15</td><td>pc</td><td>program counter</td></tr>
+  <table class="listing header">
+  <tr><td>#</td><td>Name</td><td>Purpose</td><td>ABI</td></tr>
+  <tr><td>0</td><td>zero</td><td>value always 0</td><td></td></tr>
+  <tr><td>1</td><td>one</td><td>value always 1</td><td></td></tr>
+  <tr><td>2</td><td>r2/arg1</td><td>general purpose</td><td>arg 1</td></tr>
+  <tr><td>3</td><td>r3/arg2</td><td>general purpose</td><td>arg 2</td></tr>
+  <tr><td>4</td><td>r4/index</td><td>general purpose</td><td>index in frame</td></tr>
+  <tr><td>5 - 6</td><td>r5 - r10</td><td>general purpose</td><td></td></tr>
+  <tr><td>11</td><td>r11/link</td><td>general purpose</td><td>return address</td></tr>
+  <tr><td>12</td><td>r12/frame</td><td>general purpose</td><td>frame pointer</td></tr>
+  <tr><td>13</td><td>flags</td><td>flags (bits[31:29]) and alu op (bits[7:0])</td><td></td></tr>
+  <tr><td>14</td><td>sp</td><td>stack pointer (SP)</td><td></td></tr>
+  <tr><td>15</td><td>pc</td><td>program counter (PC)</td><td></td></tr>
   </table>
+  <p>Register 0 and 1 have a fixed value and the register 13 (flags) always has bit 31 fixed to 1. Bits 30 and 29 are the negative and zero flags respectively. The lower 8 bits hold the operation used by the ALU instruction.</p>
+  <p>Register 14 (SP) is used by the POP and PUSH instructions and register 15 (PC) is the program counter. The program counter can be assigned to directly but is normally manipulated by the JAL and SETBRA instructions.</p>
+  <p>In the <a href="https://github.com/varkenvarken/robin/blob/master/bin/compiler.py">C-compiler</a> some of the registers have additional designations, those are indicated in the ABI columns.</p>
+  <div class="bumper"></div>
 </div>
 
 </div>
 <div class="footer my-purple">
-  <p>&copy; 2020 Michel Anders</p>
+  <p><span class="nav">
+  <a href="Isa_design_decisions.html"><i class="far fa-arrow-alt-circle-left"></i></a>
+  <a href="index.html"><i class="far fa-arrow-alt-circle-up"></i></a>
+  <a href="Isa_alu_opcodes.html"><i class="far fa-arrow-alt-circle-right"></i></a></span>
+  <span class="copyright">&copy; 2020 Michel Anders</span></p>
 </div>
 <script>
 function w3_open() {

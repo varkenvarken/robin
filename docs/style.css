@@ -153,6 +153,18 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
 .my-text-purple,.my-hover-text-purple:hover{color:#6d3da5!important}
 .my-purple,.my-hover-purple:hover{color:#fff!important;background-color:#6d3da5!important}
 
+/* Content specific stuff */
+
+.w3-main h1::after {
+    background-size: 70px 70px;
+    display: inline-block;
+    width: 70px; 
+    height: 70px;
+    content:"";
+    color: white;
+    background-image: url(icons/logo/goat-silhouet-cc0.svg);
+}
+    
 .icon::before {
   display: inline-block;
   font-style: normal;
@@ -195,6 +207,8 @@ ul.items li::before { margin-right:6px;
    text-align: left;
    padding-left:1em;
 }
+.footer .nav { padding-left: 30px; font-size:200%;}
+.footer .copyright { padding-left: 30px; }
 
 .tooltiptext {
   visibility: hidden;
@@ -214,9 +228,10 @@ a:hover .tooltiptext {
   opacity: 1;
 }
 
-div.bumper { height:3em;}
+div.bumper { height:5em;}
 table.listing { border-collapse: collapse; border-spacing: 0;}
 table.listing td {padding:0 1em 0 0; border: 0px solid white; margin: 0 0 0 0; }
 table.listing tr:nth-child(odd) {
   background-color: #f0e0ff;
 }
+table.header tr:nth-child(1) { background-color: #e0e0ef; font-weight:bold; }
