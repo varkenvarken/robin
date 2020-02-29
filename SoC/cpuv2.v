@@ -174,18 +174,18 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 		end else
 		case(state)
 			FETCH1	:	begin
-							r[0] <= 0;
-							r[1] <= 1;
-							r[13][31] <= 1; // force the always on bit
 							mem_raddr <= ip;
 							state <= halted ? FETCH1 : FETCH2;
 						end
 			FETCH2	:	begin
+							r[0] <= 0;
+							r[1] <= 1;
+							r[13][31] <= 1;   // force the always on bit
 							state <= FETCH3;  // there need to be two clock cycles between loading the mem_raddr and reading mem_data_out
 							r[15] <= ip1;     // but then we can update and read every new clock cycle
 							mem_raddr <= ip1; // we can already assign new read address
 							end
-			FETCH3	:	begin                 // we pssoib
+			FETCH3	:	begin
 							instruction[15:8] <= mem_data_out;
 							state <= FETCH4;
 						end
@@ -211,8 +211,12 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							state <= EXEC1;
 							case(cmd)
 								CMD_MOVEP:	begin
-												r[R2] <= sumr1r0;
 												state <= FETCH1;
+												r[R2] <= sumr1r0;
+												if( ~ &R2 ) begin // if R2 is not the PC we can take a 1 cycle shortcut
+													mem_raddr <= ip;
+													state <= FETCH2;
+												end
 											end
 								CMD_ALU:	begin
 												if(multicycle) begin 
@@ -223,6 +227,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 													r[13][29] <= alu_is_zero;
 													r[13][30] <= alu_is_negative;
 													state <= FETCH1;
+													if( ~ &R2 ) begin // if R2 is not the PC we can take a 1 cycle shortcut
+														mem_raddr <= ip;
+														state <= FETCH2;
+													end
 												end
 											end
 								CMD_POP:	begin
