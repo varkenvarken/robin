@@ -27,7 +27,43 @@
 
 <div class="w3-container">
 	<h2>ALU Opcodes</h2>
-	<p><i class="fas fa-wrench"></i> Content is a work in progress</p>
+	<p>The ALU supports the usual operations, including  multiplication and division. All operations are 32 bit, and set the negative and zero flags depending on the result. There are no carry or overflow signals generated. Multiplication is also 32 bit but two different operations are provided for the upper and lower 32 bits of the 64 bit result.</p>
+	<table class="listing header">
+	    <tr><td>#</td><td>Operation</td><td>Result</td><td></td></tr>
+	    <tr><td>0</td><td>Add</td><td>R1 + R0</td><td></td></tr>
+	    <tr><td>1</td><td>Subtract</td><td>R1 - R0</td><td></td></tr>
+	    <tr><td>4</td><td>Or</td><td>R1 | R0</td><td>bitwise or</td></tr>
+	    <tr><td>5</td><td>And</td><td>R1 &amp; R0</td><td>bitwise and</td></tr>
+	    <tr><td>6</td><td>Xor</td><td>R1 ^ R0</td><td>bitwise xor</td></tr>
+	    <tr><td>7</td><td>Not</td><td>~R1</td><td>R0 is ignored</td></tr>
+	    <tr><td>8</td><td>Cmp</td><td>sign(R1 - R0)</td><td></td></tr>
+	    <tr><td>9</td><td>Test</td><td>R1</td><td>set flags</td></tr>
+	    <tr><td>12</td><td>Shift left</td><td>R1 &lt;&lt; R0</td><td></td></tr>
+	    <tr><td>13</td><td>Shift right</td><td>R1 &gt;&gt; R0</td><td></td></tr>
+	    <tr><td>14</td><td>Multiply (low)</td><td>R1 * R0</td><td>lower 32 bits</td></tr>
+	    <tr><td>15</td><td>Multiply (high)</td><td>R1 * R0</td><td>upper 32 bits</td></tr>
+	    <tr><td>16</td><td>Divide (unsigned)</td><td>R1 // R0</td><td></td></tr>
+	    <tr><td>17</td><td>Divide (signed)</td><td>R1 // R0</td><td>sign = sign(R1) ^ sign(R0)</td></tr>
+	    <tr><td>18</td><td>Remainder (unsigned)</td><td>R1 - R0 * (R1 // R0)</td><td></td></tr>
+	    <tr><td>19</td><td>Remainder (signed)</td><td>R1 - R0 * (R1 // R0)</td><td>sign = sign(R1) ^ sign(R0)</td></tr>
+	</table>
+	<p>ALU operations are performed by assigning the operation number to the lower byte of register 13 and the executing the ALU instruction. For example, to subtract register 5 and 4 and assign the result to register 6,the following assembly cold be used</p>
+	<pre><code>
+	loadi	r13,#1
+	alu	r6,r5,r4
+	</code></pre>
+	<p>The <a href="https://github.com/varkenvarken/robin/blob/master/bin/assembler.py">assembler</a> provides built-in mnemonics for all operations so equivalently we could have written</p>
+	<pre><code>
+	loadi	r13,#alu_sub
+	alu	r6,r5,r4
+	</code></pre>
+	<p>Additionally the <a  href="https://github.com/varkenvarken/robin/blob/master/bin/lib.S">macro file</a> provided with the assembler defines many shortcuts, so a shorter notation would be</p>
+	<pre><code>
+	sub	r6,r5,r4
+	</code></pre>
+	<p>Note that the latter is shorter but if you would like to perform multiple identical operations on different sets of operands it is more efficient to explicitly load the operation code only once into register 13 and then perform the operations. using the marco would load register 13 anew every time.</p>
+	<p>Addition can also be performed with <code>move  r6,r5,r4</code>. This example will add registers 4 and 5 but will not set any flags.</p>
+	<div class="bumper"></div>
 </div>
 
 </div>
@@ -35,7 +71,7 @@
   <p><span class="nav">
   <a href="Isa_fields_special_registers.html"><i class="far fa-arrow-alt-circle-left"></i></a>
   <a href="index.html"><i class="far fa-arrow-alt-circle-up"></i></a>
-  <a href="index.html"><i class="far fa-arrow-alt-circle-right"></i></a></span>
+  <a href="Execution_fetching_two_bytes.html"><i class="far fa-arrow-alt-circle-right"></i></a></span>
   <span class="copyright">&copy; 2020 Michel Anders</span></p>
 </div>
 <script>

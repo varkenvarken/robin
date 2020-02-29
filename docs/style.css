@@ -164,7 +164,9 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
     color: white;
     background-image: url(icons/logo/goat-silhouet-cc0.svg);
 }
-    
+   
+.w3-main p { width:46em; }
+
 .icon::before {
   display: inline-block;
   font-style: normal;
