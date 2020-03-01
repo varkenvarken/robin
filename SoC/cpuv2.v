@@ -301,6 +301,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												mem_raddr <= r[15];
 												r[15] <= ip2;
 												r[R1] <= takebranch; // R1 because R2 decodes the condition
+												if( ~takebranch ) state <= FETCH1;
 											end
 								CMD_JUMP:	begin
 												r[R2] <= r[15];
@@ -316,7 +317,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							endcase
 						end
 			EXEC1	:	begin
-							mem_raddr <= mem_raddr + 1;
+							mem_raddr <= mem_raddr + 1;  // the address for loadb2
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
 
@@ -344,7 +345,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							if(loadli) r[15] <= ip2; // we increment the pc in two steps to save on LUTs needed for adder
 						end
 			EXEC2	:	begin
-							mem_raddr <= mem_raddr + 1;
+							mem_raddr <= mem_raddr + 1;   // the address for loadb1
 							state <= FETCH1;
 
 							if(loadb3) begin
@@ -362,7 +363,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							if(pop) r[14] <= r[14] + 4; // no need to set state because loadb3 will also have been set
 						end
 			EXEC3	:	begin
-							mem_raddr <= mem_raddr + 1;
+							mem_raddr <= mem_raddr + 1;  // the address for loadb0
 							state <= FETCH1;
 
 							if(loadb2) begin
@@ -378,7 +379,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								mem_write <= 1;
 								state <= EXEC4;
 							end
-
 						end
 			EXEC4	:	begin
 							state <= FETCH1;
@@ -396,7 +396,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			EXEC5	:	begin
 							state <= FETCH1;
-
+							// mem_raddr <= ip; state <= FETCH2;
 							if(loadb0) begin
 								r[R2][31:8] <= temp[31:8];
 								r[R2][7:0] <= mem_data_out;
