@@ -199,6 +199,13 @@ ul.items li::before { margin-right:6px;
   content: "\f08d";
   color:#6d3da5;}
 
+a.external::after {  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  font-size:50%;
+  vertical-align:super;
+  content: " \f35d";
+  color:#6d3da5;}
+
 .footer {
    position: fixed;
    left: 0;
@@ -237,3 +244,5 @@ table.listing tr:nth-child(odd) {
   background-color: #f0e0ff;
 }
 table.header tr:nth-child(1) { background-color: #e0e0ef; font-weight:bold; }
+
+pre code {font-size:80%; }
