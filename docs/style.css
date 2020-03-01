@@ -217,6 +217,9 @@ a.external::after {  font-family: "Font Awesome 5 Free";
    padding-left:1em;
 }
 .footer .nav { padding-left: 30px; font-size:200%;}
+.footer .nav-secondary { padding-left: 30px; font-size:150%;}
+.footer .nav-secondary a { padding-right: 30px;}
+.footer .nav-secondary .label { padding-left: 10px;}
 .footer .copyright { padding-left: 30px; }
 
 .tooltiptext {
