@@ -395,13 +395,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							end
 						end
 			EXEC5	:	begin
-							state <= FETCH1;
-							// mem_raddr <= ip; state <= FETCH2;
-							if(loadb0) begin
-								r[R2][31:8] <= temp[31:8];
-								r[R2][7:0] <= mem_data_out;
-							end
-
+							mem_raddr <= ip;
+							state <= FETCH2;
+							// no need to test for signals only LOADIL (loadb0) can end up in state == EXEC5
+							r[R2][31:8] <= temp[31:8];
+							r[R2][7:0] <= mem_data_out;
 						end
 			HALT	:	begin
 							halted <= 1;
