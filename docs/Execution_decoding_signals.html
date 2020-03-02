@@ -28,8 +28,8 @@
 <div class="w3-container">
 <h2>Fetch-Decode-Exec: decoding signals</h2>
 <p><i class="fas fa-wrench"></i> Content is a work in progress</p>
-<p>The DECODE state figures out what to do in the next couple of cycles based on the opcode. For each opcode it sets a few signals that can be checked in subsequent states without needing much logic. Different opcodes may set the same signal, for example all opcode that need to load one or more bytes, like LOADIL, POP and SETBRA, will set the loadb3 signal.</p>
-<p>Some instructions do not set any signal but take a shortcut and do whatever they need to immediately in the DECODE state and change the state to FETCH1 to initiate a new fetch-decode-execute cycle. This is typically true of instructions like MOVE that do not refer to memory but just to registers. As we will see in a later article on the beginning of a pipelined implementation there are more shortcuts possible but we keep it simple for now (the version in the repository does implemented those shortcuts)</p>
+<p>The DECODE state figures out what to do in the next couple of cycles based on the opcode. For each opcode it sets a few signals that can be checked in subsequent states without needing much logic. Different opcodes may set the same signal, for example all opcodes that need to load one or more bytes, like LOADIL, POP and SETBRA, will set the loadb3 signal.</p>
+<p>Some instructions do not set any signal but take a shortcut and do whatever they need to immediately in the DECODE state and change the state to FETCH1 to initiate a new fetch-decode-execute cycle. This is typically true of instructions like MOVE that do not refer to memory but just to registers. As we will see in a later article on the beginning of a pipelined implementation there are more shortcuts possible but we keep it simple for now (the version in the repository has implemented those shortcuts already)</p>
 <p>We have more than ten instructions, not even counting the different ALU operations so weĺl look at the code in detail for only a few of those instructions</p>
 <pre><code>
 DECODE  : begin
@@ -40,6 +40,11 @@ DECODE  : begin
                             r[R2] <= sumr1r0;
                           end
 <pre><code>
+<p>For the MOVE instruction there no signals to generate: we simply add the two source registers and assign the result to the destination register. we also make sure the the next state is the start of a new fetch.</p>
+<p>The instructions shown in the code below, POP, LOADB, LOADL and LOADIL, all need to load one or more bytes in the cycles that follow, albeit from different addfesses.</p>
+<p>So each of those instructions sets tbe mem_raddr register to the appropriate address: for the POP instruction that is the contents of
+register 14 (tbe stack pointer), and for example the LOAD instructions whatever the sum of the source registers points to.</p>
+<p>The difference between those last two instructions is that for a load byte instruction only tbe loadb3 signal will be set, while for a load long all loadb signals will be set (because we will need four cycles to read four bytes.</p>
 </code></pre>
                     CMD_POP:        begin
                                                     mem_raddr <= r[14];
@@ -70,6 +75,11 @@ DECODE  : begin
                                                     r[15] <= ip2;  // we increment the pc in two steps to save on LUTs needed for adder
                                             end
 </code></pre>
+<p>The final part of the decode logic we look at is for the ALU instruction (Store and push are similar to load and pop but set the mem_waddr register)</p>
+<p>If the alu operation is a division operation the multicycle wire will be true and we set the div_go signal to start the divider module.
+We also set the div signal so that we can act on it in later cycles.</p>
+If it was not a division we can assihn the output of the alu (alu_c) to the destination register and set tbe flag bits in register 13. we 
+ also start the next fetch. This is not the case for division though because division takes multiple cycles.</p>
 <pre><code>
                     CMD_ALU:        begin
                                                     if(multicycle) begin 
@@ -80,10 +90,6 @@ DECODE  : begin
                                                             r[13][29] <= alu_is_zero;
                                                             r[13][30] <= alu_is_negative;
                                                             state <= FETCH1;
-                                                            if( ~ &R2 ) begin // if R2 is not the PC we can take a 1 cycle shortcut
-                                                                    mem_raddr <= ip;
-                                                                    state <= FETCH2;
-                                                            end
                                                     end
                                             end
 </code></pre>
