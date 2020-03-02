@@ -39,12 +39,11 @@ DECODE  : begin
                             state <= FETCH1;
                             r[R2] <= sumr1r0;
                           end
-<pre><code>
-<p>For the MOVE instruction there no signals to generate: we simply add the two source registers and assign the result to the destination register. we also make sure the the next state is the start of a new fetch.</p>
+</code></pre>
+<p>For the MOVE instruction there are no signals to generate: we simply add the two source registers and assign the result to the destination register. We also make sure the the next state is the start of a new fetch.</p>
 <p>The instructions shown in the code below, POP, LOADB, LOADL and LOADIL, all need to load one or more bytes in the cycles that follow, albeit from different addfesses.</p>
-<p>So each of those instructions sets tbe mem_raddr register to the appropriate address: for the POP instruction that is the contents of
-register 14 (tbe stack pointer), and for example the LOAD instructions whatever the sum of the source registers points to.</p>
-<p>The difference between those last two instructions is that for a load byte instruction only tbe loadb3 signal will be set, while for a load long all loadb signals will be set (because we will need four cycles to read four bytes.</p>
+<p>So each of those instructions sets tbe mem_raddr register to the appropriate address: for the POP instruction that is the contents of register 14 (tbe stack pointer), and for example for the LOAD instructions whatever the sum of the source registers points to.</p>
+<p>The difference between those last two instructions is that for a load byte instruction only tbe loadb3 signal will be set, while for a load long all loadb signals will be set (because we will need four cycles to read four bytes.)</p>
 </code></pre>
                     CMD_POP:        begin
                                                     mem_raddr <= r[14];
@@ -75,11 +74,9 @@ register 14 (tbe stack pointer), and for example the LOAD instructions whatever 
                                                     r[15] <= ip2;  // we increment the pc in two steps to save on LUTs needed for adder
                                             end
 </code></pre>
-<p>The final part of the decode logic we look at is for the ALU instruction (Store and push are similar to load and pop but set the mem_waddr register)</p>
-<p>If the alu operation is a division operation the multicycle wire will be true and we set the div_go signal to start the divider module.
-We also set the div signal so that we can act on it in later cycles.</p>
-If it was not a division we can assihn the output of the alu (alu_c) to the destination register and set tbe flag bits in register 13. we 
- also start the next fetch. This is not the case for division though because division takes multiple cycles.</p>
+<p>In the final part of the decode logic we look at the ALU instruction (Store and push are similar to load and pop but set the mem_waddr register)</p>
+<p>If the alu operation is a division operation, the multicycle wire will be true and we set the div_go signal to start the divider module. We also set the div signal so that we can act on it in later cycles.</p>
+If it was not a division we can assign the output of the alu module (alu_c) to the destination register and set tbe flag bits in register 13. We also start the next fetch. This is not the case for division though, because division takes multiple cycles.</p>
 <pre><code>
                     CMD_ALU:        begin
                                                     if(multicycle) begin 
