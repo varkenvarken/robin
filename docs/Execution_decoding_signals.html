@@ -44,7 +44,8 @@ DECODE  : begin
 <p>The instructions shown in the code below, POP, LOADB, LOADL and LOADIL, all need to load one or more bytes in the cycles that follow, albeit from different addfesses.</p>
 <p>So each of those instructions sets tbe mem_raddr register to the appropriate address: for the POP instruction that is the contents of register 14 (tbe stack pointer), and for example for the LOAD instructions whatever the sum of the source registers points to.</p>
 <p>The difference between those last two instructions is that for a load byte instruction only tbe loadb3 signal will be set, while for a load long all loadb signals will be set (because we will need four cycles to read four bytes.)</p>
-</code></pre>
+<p>The POP instruction also sets the pop signal so that later, after loading all the bytes, we can increment register 14 by 4.</p>
+<pre><code>
                     CMD_POP:        begin
                                                     mem_raddr <= r[14];
                                                     loadb3 <= 1;
