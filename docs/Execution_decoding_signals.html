@@ -26,26 +26,74 @@
 </div>
 
 <div class="w3-container">
-	<h2>Article title</h2>
-	<p><i class="fas fa-wrench"></i> Content is a work in progress</p>
-	<p>Content ,,,,,</p>
-	<p>Some verilog code</p>
-	<pre><code>
-	module verilogsample (a,b,c);
-
-	always @(posedge wclk)
-	begin
-		if (write_en) mem[waddr] <= din;
-	end
-	endmodule
-	</code></pre>
-	<div class="bumper"></div>
+<h2>Fetch-Decode-Exec: decoding signals</h2>
+<p><i class="fas fa-wrench"></i> Content is a work in progress</p>
+<p>The DECODE state figures out what to do in the next couple of cycles based on the opcode. For each opcode it sets a few signals that can be checked in subsequent states without needing much logic. Different opcodes may set the same signal, for example all opcode that need to load one or more bytes, like LOADIL, POP and SETBRA, will set the loadb3 signal.</p>
+<p>Some instructions do not set any signal but take a shortcut and do whatever they need to immediately in the DECODE state and change the state to FETCH1 to initiate a new fetch-decode-execute cycle. This is typically true of instructions like MOVE that do not refer to memory but just to registers. As we will see in a later article on the beginning of a pipelined implementation there are more shortcuts possible but we keep it simple for now (the version in the repository does implemented those shortcuts)</p>
+<p>We have more than ten instructions, not even counting the different ALU operations so weĺl look at the code in detail for only a few of those instructions</p>
+<pre><code>
+DECODE  : begin
+            state <= EXEC1;
+            case(cmd)
+              CMD_MOVEP:  begin
+                            state <= FETCH1;
+                            r[R2] <= sumr1r0;
+                          end
+<pre><code>
+</code></pre>
+                    CMD_POP:        begin
+                                                    mem_raddr <= r[14];
+                                                    loadb3 <= 1;
+                                                    loadb2 <= 1;
+                                                    loadb1 <= 1;
+                                                    loadb0 <= 1;
+                                                    pop <= 1;
+                                            end
+                    CMD_LOADB:      begin
+                                                    loadb3 <= 1;
+                                                    mem_raddr <= sumr1r0_addr;
+                                            end
+                    CMD_LOADL:      begin
+                                                    loadb3 <= 1;
+                                                    loadb2 <= 1;
+                                                    loadb1 <= 1;
+                                                    loadb0 <= 1;
+                                                    mem_raddr <= sumr1r0_addr;
+                                            end
+                    CMD_LOADIL: begin
+                                                    loadb3 <= 1;
+                                                    loadb2 <= 1;
+                                                    loadb1 <= 1;
+                                                    loadb0 <= 1;
+                                                    loadli <= 1;
+                                                    mem_raddr <= r[15];
+                                                    r[15] <= ip2;  // we increment the pc in two steps to save on LUTs needed for adder
+                                            end
+</code></pre>
+<pre><code>
+                    CMD_ALU:        begin
+                                                    if(multicycle) begin 
+                                                            div_go <= 1; // start the divider module if we have a divider operation
+                                                            div <= 1;
+                                                    end     else begin
+                                                            r[R2] <= alu_c;
+                                                            r[13][29] <= alu_is_zero;
+                                                            r[13][30] <= alu_is_negative;
+                                                            state <= FETCH1;
+                                                            if( ~ &R2 ) begin // if R2 is not the PC we can take a 1 cycle shortcut
+                                                                    mem_raddr <= ip;
+                                                                    state <= FETCH2;
+                                                            end
+                                                    end
+                                            end
+</code></pre>
+<div class="bumper"></div>
 </div>
 
 </div>
 <div class="footer my-purple">
   <p><span class="nav">
-  <a href="Isa_alu_opcodes.html"><i class="far fa-arrow-alt-circle-left"></i></a>
+  <a href="Execution_fetching_two_bytes.html"><i class="far fa-arrow-alt-circle-left"></i></a>
   <a href="index.html"><i class="far fa-arrow-alt-circle-up"></i></a>
   <a href="index.html"><i class="far fa-arrow-alt-circle-right"></i></a></span>
   <span class="copyright">&copy; 2020 Michel Anders</span>
