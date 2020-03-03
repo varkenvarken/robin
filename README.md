@@ -19,6 +19,28 @@ Additionallt, the CPU design is being documented on [a separate website](https:/
 
 The badges indicate if main python files pass pep8, all instructions can be simulated correctly in the simulator and libc examples can be compiled, assembled and simulated with correct results. That does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
 
+## Dependencies
+
+* python3
+* yosys
+* nextpnr-ice40
+* icestorm
+
 ## Installation
 
-After cloning the repository, do not forget to do a             git submodule update --init
+    git clone https://github.com/varkenvarken/robin.git
+    cd robin
+    git submodule update --init
+    cd SoC
+    make
+
+You can then flash the iCEbreaker with
+
+    make flash
+
+It might be a good thing to rn the hardware test at that point
+
+    cd Test
+    make
+    make testhard
+
