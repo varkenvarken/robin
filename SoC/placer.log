@@ -1,6 +1,6 @@
 Info: Importing module top
 Info: Rule checker, verifying imported design
-Info: Checksum: 0xc987e4f7
+Info: Checksum: 0x8c70d9e0
 
 Info: constrained 'CLK' to bel 'X12/Y31/io1'
 Info: constrained 'RX' to bel 'X13/Y0/io1'
@@ -40,10 +40,10 @@ Info: promoting cpu0.alu0.cmp_SB_LUT4_O_I2_SB_LUT4_I2_O_SB_LUT4_I3_I1_SB_LUT4_O_
 Info: promoting cpu0.div0.step_SB_LUT4_I2_O [cen] (fanout 32)
 Info: Constraining chains...
 Info:       33 LCs used to legalise carry chains.
-Info: Checksum: 0x483f555b
+Info: Checksum: 0xf80f2f61
 
 Info: Annotating ports with timing budgets for target frequency 12.00 MHz
-Info: Checksum: 0xcc59226e
+Info: Checksum: 0x87bd6c76
 
 Info: Device utilisation:
 Info: 	         ICESTORM_LC:  4944/ 5280    93%
@@ -74,7 +74,7 @@ Info:   initial placement placed 3500/4986 cells
 Info:   initial placement placed 4000/4986 cells
 Info:   initial placement placed 4500/4986 cells
 Info:   initial placement placed 4986/4986 cells
-Info: Initial placement time 2.29s
+Info: Initial placement time 2.27s
 Info: Running simulated annealing placer.
 Info:   at iteration #1: temp = 1.000000, timing cost = 5146, wirelen = 138218
 Info:   at iteration #5: temp = 0.062500, timing cost = 6522, wirelen = 139274
@@ -145,7 +145,7 @@ Info:   at iteration #290: temp = 0.000000, timing cost = 4325, wirelen = 30639
 Info:   at iteration #295: temp = 0.000000, timing cost = 4326, wirelen = 30635
 Info:   at iteration #300: temp = 0.000000, timing cost = 4325, wirelen = 30620
 Info:   at iteration #302: temp = 0.000000, timing cost = 4323, wirelen = 30618 
-Info: SA placement time 92.34s
+Info: SA placement time 91.08s
 
 Info: Max frequency for clock 'CLK$SB_IO_IN_$glb_clk': 13.37 MHz (PASS at 12.00 MHz)
 Info: Clock '$PACKER_GND_NET' has no interior paths
@@ -178,7 +178,7 @@ Info: [ 65865,  69447) |*************************+
 Info: [ 69447,  73029) |************************************************************ 
 Info: [ 73029,  76611) |*****************************+
 Info: [ 76611,  80193) |***********************************************+
-Info: Checksum: 0xbd165408
+Info: Checksum: 0xd4d2ecad
 
 Info: Routing..
 Info: Setting up routing queue.
@@ -325,8 +325,8 @@ Info:     137000 |    73694      63305 |  583   417 |       305
 Info:     138000 |    74247      63752 |  553   447 |       169
 Info:     138378 |    74386      63992 |  139   240 |         0
 Info: Routing complete.
-Info: Route time 80.42s
-Info: Checksum: 0xe98a9c32
+Info: Route time 81.06s
+Info: Checksum: 0x9281d589
 
 Info: Critical path report for clock 'CLK$SB_IO_IN_$glb_clk' (posedge -> posedge):
 Info: curr total

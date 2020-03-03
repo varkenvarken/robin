@@ -18,3 +18,7 @@ Additionallt, the CPU design is being documented on [a separate website](https:/
 ## About test results
 
 The badges indicate if main python files pass pep8, all instructions can be simulated correctly in the simulator and libc examples can be compiled, assembled and simulated with correct results. That does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
+
+## Installation
+
+After cloning the repository, do not forget to do a             git submodule update --init

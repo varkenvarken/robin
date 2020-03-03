@@ -11,6 +11,7 @@ PACKAGE = sg48
 PLACER = sa # heap
 PLACERLOG = placer.log
 OUTPUT = $(patsubst %.v,%.bin,$(TOP))
+UART = ../osdvu/uart.v
 
 all: $(OUTPUT)
 
@@ -20,7 +21,7 @@ all: $(OUTPUT)
 %.asc: %.json $(PCF)
 	$(PNR) $(DEVICE) --placer $(PLACER) --package $(PACKAGE) --quiet --log $(PLACERLOG) --json $< --pcf $(PCF) --asc $@
 
-%.json: $(TOP) debounce.v fifo.v ram.v spram.v cpu.v cpuv2.v alu.v divider.v $(PCF) rom.hex Makefile
+%.json: $(TOP) debounce.v fifo.v ram.v spram.v cpu.v cpuv2.v alu.v divider.v $(PCF) rom.hex $(UART) Makefile
 	$(SYN) -q -p "read_verilog $<; hierarchy -libdir . ; synth_ice40 -dsp -flatten -json $@"
 
 rom.hex: ../bin/lib.S firmware.S
