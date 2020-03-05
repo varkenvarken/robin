@@ -30,8 +30,8 @@ skip2:
     sub     r8,r8,r6    ; r8 now holds the cycles for just loadil
     sub     r9,r9,r6    ; r9 now holds the cycles for just a combinatorial alu
     sub     r10,r10,r6  ; r10 now holds the cycles for just a storl
-    sub     r11,r11,r6  ; r10 now holds the cycles for just a non taken branch
-    sub     r12,r12,r6  ; r10 now holds the cycles for just a taken branch
+    sub     r11,r11,r6  ; r11 now holds the cycles for just a non taken branch
+    sub     r12,r12,r6  ; r12 now holds the cycles for just a taken branch
     halt
 dump:
     long    0

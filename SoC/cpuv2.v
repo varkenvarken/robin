@@ -188,9 +188,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			FETCH3	:	begin
 							instruction[15:8] <= mem_data_out;
 							state <= FETCH4;
+							mem_raddr <= mem_raddr + 1;
 						end
 			FETCH4	:	begin
 							instruction[7:0] <= mem_data_out;
+							mem_raddr <= mem_raddr + 1;
 							r[15] <= ip1;
 							div_go <= 0;
 							state <= DECODE;
@@ -296,9 +298,9 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 											end
 								CMD_SETBRA:	begin
 												branch <= 1;
-												loadb3 <= 1;
-												loadb2 <= 1;
-												mem_raddr <= r[15];
+												//loadb3 <= 1;
+												//loadb2 <= 1;
+												// mem_raddr <= r[15];
 												r[15] <= ip2;
 												r[R1] <= takebranch; // R1 because R2 decodes the condition
 												if( ~takebranch ) state <= FETCH1;
@@ -315,8 +317,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 `endif
 								default: state <= FETCH1;
 							endcase
+							temp[31:24] <= mem_data_out;
 						end
 			EXEC1	:	begin
+							temp[23:16] <= mem_data_out;
 							mem_raddr <= mem_raddr + 1;  // the address for loadb2
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
@@ -353,6 +357,8 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC3;
 							end
 
+							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
+
 							if(storb1) begin
 								mem_waddr <= mem_waddr + 1;
 								mem_data_in <= r[R2][15:8];
@@ -388,7 +394,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC5;
 							end
 
-							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
+							//if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
 
 							if(storb0) begin
 								mem_write <= 1;
