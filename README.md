@@ -13,11 +13,11 @@ The Robin SoC consists of several components, each documented on their own wiki 
 * A [compiler](https://github.com/varkenvarken/robin/wiki/Compiler), to convert a C-like language to assembly
 * A [simulator](https://github.com/varkenvarken/robin/wiki/Simulator), to simulate running binary programs
 
-Additionallt, the CPU design is being documented on [a separate website](https://varkenvarken.github.io/robin/index.html)
+Additionally, the CPU design is being documented on [a separate website](https://varkenvarken.github.io/robin/index.html) and progess is reported on a [blog](https://fpga.michelanders.nl/)
 
 ## About test results
 
-The badges indicate if main python files pass pep8, all instructions can be simulated correctly in the simulator and libc examples can be compiled, assembled and simulated with correct results. That does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
+The badges indicate if the main python files pass pep8, all instructions can be simulated correctly in the simulator and libc examples can be compiled, assembled and simulated with correct results. That does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
 
 ## Dependencies
 
@@ -34,11 +34,11 @@ The badges indicate if main python files pass pep8, all instructions can be simu
     cd SoC
     make
 
-You can then flash the iCEbreaker with
+You can then flash the iCEbreaker (if connected to a USB port) with
 
     make flash
 
-It might be a good thing to rn the hardware test at that point
+It might be a good thing to run the hardware test at that point
 
     cd Test
     make
