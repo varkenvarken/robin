@@ -186,9 +186,15 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							mem_raddr <= ip1; // ins lo
 							end
 			FETCH3	:	begin
+							pop <= 0;
 							instruction[15:8] <= mem_data_out;
 							state <= FETCH4;
-							mem_raddr <= mem_raddr + 1;  // b3
+							if(mem_data_out[7:4] == CMD_POP) begin
+								mem_raddr <= r[14];
+								pop <= 1;
+							end else begin
+								mem_raddr <= mem_raddr + 1;  // b3
+							end
 						end
 			FETCH4	:	begin
 							instruction[7:0] <= mem_data_out;
@@ -197,7 +203,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							div_go <= 0;
 							state <= DECODE;
 							div <= 0;
-							pop <= 0;
 							loadb3 <= 0;
 							loadb2 <= 0;
 							loadb1 <= 0;
@@ -237,11 +242,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												end
 											end
 								CMD_POP:	begin
-												mem_raddr <= r[14];
-												loadb3 <= 1;
-												loadb2 <= 1;
-												loadb1 <= 1;
-												loadb0 <= 1;
+												//mem_raddr <= r[14];
+												//loadb3 <= 1;
+												//loadb2 <= 1;
+												//loadb1 <= 1;
+												//loadb0 <= 1;
 												pop <= 1;
 											end
 								CMD_MOVER:	begin
@@ -357,7 +362,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
 
-							if(loadli) begin
+							if(loadli | pop) begin
 								temp[15:8] <= mem_data_out; // b1
 								state <= EXEC3;
 							end
@@ -369,8 +374,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC3;
 							end
 
-							
-							if(pop) r[14] <= r[14] + 4; // no need to set state because loadb3 will also have been set
+							if(pop) r[14] <= r[14] + 4; // no need to set state because has been done by loadli | pop
 						end
 			EXEC3	:	begin
 							mem_raddr <= mem_raddr + 1;  // the address for loadb0
@@ -383,7 +387,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24]; // a single byte load, not a long
 
-							if(loadli) begin
+							if(loadli | pop) begin
 								mem_raddr <= ip;
 								state <= FETCH2;
 								r[R2][31:8] <= temp[31:8];

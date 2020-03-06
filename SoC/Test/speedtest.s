@@ -32,6 +32,16 @@ skip2:
     sub     r10,r10,r6  ; r10 now holds the cycles for just a storl
     sub     r11,r11,r6  ; r11 now holds the cycles for just a non taken branch
     sub     r12,r12,r6  ; r12 now holds the cycles for just a taken branch
+    ; at this point r6 - r12 hold meaningful information, ie. we can reuse r3 - r5
+    mark    r3
+    push    r3
+    mark    r4
+    pop     r3
+    mark    r5
+    sub     r5,r5,r4
+    sub     r4,r4,r3
+    sub     r5,r5,r6    ; r5 hold cycles for pop
+    sub     r4,r4,r6    ; r4 hold cycles for push
     halt
 dump:
     long    0
