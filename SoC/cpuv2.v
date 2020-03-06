@@ -174,7 +174,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 		end else
 		case(state)
 			FETCH1	:	begin
-							mem_raddr <= ip;
+							mem_raddr <= ip;  // ins hi
 							state <= halted ? FETCH1 : FETCH2;
 						end
 			FETCH2	:	begin
@@ -183,16 +183,16 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							r[13][31] <= 1;   // force the always on bit
 							state <= FETCH3;  // there need to be two clock cycles between loading the mem_raddr and reading mem_data_out
 							r[15] <= ip1;     // but then we can update and read every new clock cycle
-							mem_raddr <= ip1; // we can already assign new read address
+							mem_raddr <= ip1; // ins lo
 							end
 			FETCH3	:	begin
 							instruction[15:8] <= mem_data_out;
 							state <= FETCH4;
-							mem_raddr <= mem_raddr + 1;
+							mem_raddr <= mem_raddr + 1;  // b3
 						end
 			FETCH4	:	begin
 							instruction[7:0] <= mem_data_out;
-							mem_raddr <= mem_raddr + 1;
+							mem_raddr <= mem_raddr + 1;  // b2
 							r[15] <= ip1;
 							div_go <= 0;
 							state <= DECODE;
@@ -211,6 +211,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			DECODE	:	begin
 							state <= EXEC1;
+							mem_raddr <= mem_raddr + 1; // b1
 							case(cmd)
 								CMD_MOVEP:	begin
 												state <= FETCH1;
@@ -259,12 +260,12 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												mem_raddr <= sumr1r0_addr;
 											end
 								CMD_LOADIL: begin
-												loadb3 <= 1;
-												loadb2 <= 1;
-												loadb1 <= 1;
-												loadb0 <= 1;
+												//loadb3 <= 1;
+												//loadb2 <= 1;
+												//loadb1 <= 1;
+												//loadb0 <= 1;
 												loadli <= 1;
-												mem_raddr <= r[15];
+												//mem_raddr <= r[15];
 												r[15] <= ip2;  // we increment the pc in two steps to save on LUTs needed for adder
 											end
 								CMD_STORB:	begin
@@ -298,9 +299,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 											end
 								CMD_SETBRA:	begin
 												branch <= 1;
-												//loadb3 <= 1;
-												//loadb2 <= 1;
-												// mem_raddr <= r[15];
 												r[15] <= ip2;
 												r[R1] <= takebranch; // R1 because R2 decodes the condition
 												if( ~takebranch ) state <= FETCH1;
@@ -317,11 +315,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 `endif
 								default: state <= FETCH1;
 							endcase
-							temp[31:24] <= mem_data_out;
+							temp[31:24] <= mem_data_out;  // b3
 						end
 			EXEC1	:	begin
-							temp[23:16] <= mem_data_out;
-							mem_raddr <= mem_raddr + 1;  // the address for loadb2
+							temp[23:16] <= mem_data_out; // b2
+							mem_raddr <= mem_raddr + 1;  // b0 
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
 
@@ -359,6 +357,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 
 							if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
 
+							if(loadli) begin
+								temp[15:8] <= mem_data_out; // b1
+								state <= EXEC3;
+							end
+
 							if(storb1) begin
 								mem_waddr <= mem_waddr + 1;
 								mem_data_in <= r[R2][15:8];
@@ -366,6 +369,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC3;
 							end
 
+							
 							if(pop) r[14] <= r[14] + 4; // no need to set state because loadb3 will also have been set
 						end
 			EXEC3	:	begin
@@ -378,6 +382,13 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							end
 
 							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24]; // a single byte load, not a long
+
+							if(loadli) begin
+								mem_raddr <= ip;
+								state <= FETCH2;
+								r[R2][31:8] <= temp[31:8];
+								r[R2][7:0] <= mem_data_out;
+							end
 
 							if(storb0) begin
 								mem_waddr <= mem_waddr + 1;
@@ -394,8 +405,6 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC5;
 							end
 
-							//if(branch & takebranch) r[15] <= branchtarget; // branchtarget refers to upper half of temp so should be ready
-
 							if(storb0) begin
 								mem_write <= 1;
 							end
@@ -403,7 +412,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 			EXEC5	:	begin
 							mem_raddr <= ip;
 							state <= FETCH2;
-							// no need to test for signals only LOADIL (loadb0) can end up in state == EXEC5
+							// no need to test for signals only LOADL (loadb0) can end up in state == EXEC5
 							r[R2][31:8] <= temp[31:8];
 							r[R2][7:0] <= mem_data_out;
 						end
