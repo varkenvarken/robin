@@ -239,9 +239,13 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								CMD_POP:	begin // empty instruction, pop was already set during fetch
 												pop <= 1;
 											end
-								CMD_MOVER:	begin // OPTIMIZATION: if R2 != PC we can take a shortcut to FETCH2
+								CMD_MOVER:	begin
 												r[R2] <= r1_offset;
 												state <= FETCH1;
+												if( ~ &R2 ) begin	// if R2 is not the PC we can take a 1 cycle shortcut
+													mem_raddr <= ip;
+													state <= FETCH2;
+												end
 											end
 								CMD_LOADB:	begin
 												loadb3 <= 1;
