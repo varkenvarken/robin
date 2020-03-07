@@ -175,7 +175,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 		case(state)
 			FETCH1	:	begin
 							mem_raddr <= ip;  // ins hi
-							state <= halted ? FETCH1 : FETCH2;
+							state <= FETCH2;
 						end
 			FETCH2	:	begin
 							r[0] <= 0;
