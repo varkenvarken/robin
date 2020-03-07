@@ -61,7 +61,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 		.is_negative(alu_is_negative)
 	);
 
-	// divider
+	// divider (multicycle)
 	wire [31:0] div_a = r[R1];
 	wire [31:0] div_b = r[R0];
 	wire [31:0] div_c;
@@ -91,21 +91,16 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	localparam FETCH2		= 1;
 	localparam FETCH3		= 2;
 	localparam FETCH4		= 3;
-	localparam FETCH5		= 4;
-	localparam FETCH6		= 5;
-	localparam DECODE		= 6;
-	localparam EXEC1		= 7;
-	localparam EXEC2		= 8;
-	localparam EXEC3		= 9;
-	localparam EXEC4		= 10;
-	localparam EXEC5		= 11;
-	localparam EXEC6		= 12;
-	localparam EXEC7		= 13;
-	localparam EXEC8		= 14;
+	localparam DECODE		= 4;
+	localparam EXEC1		= 8;
+	localparam EXEC2		= 9;
+	localparam EXEC3		= 10;
+	localparam EXEC4		= 11;
+	localparam EXEC5		= 12;
 	localparam HALT			= 15;
 
 	// instruction pointer
-	wire [addr_width-1:0] ip = r[15][addr_width-1:0]; // the addressable bits of the program counter
+	wire [addr_width-1:0] ip = r[15][addr_width-1:0];  // the addressable bits of the program counter
 	wire [31:0] ip1 = {{(32-addr_width){1'b0}},ip+1};  // incremented program counter, just for the addressable bits
 	wire [31:0] ip2 = {{(32-addr_width){1'b0}},ip+2};  // pc + 2, just for the addressable bits
 
@@ -136,23 +131,23 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	wire [addr_width-1:0] sumr1r0_addr = sumr1r0[addr_width-1:0];
 
 	// opcodes
-	localparam CMD_MOVEP   =  0;
-	localparam CMD_POP     =  1;
-	localparam CMD_ALU     =  2;
-	localparam CMD_MOVER   =  3;
-	localparam CMD_LOADB   =  4;
-	localparam CMD_SETBRA  =  5;
-	localparam CMD_LOADL   =  6;
-	localparam CMD_LOADIL  =  7;
-	localparam CMD_STORB   =  8;
-	localparam CMD_PUSH    =  9;
-	localparam CMD_STORL   = 10;
+	localparam CMD_MOVE    =  0;  // r2 <- r1 + r0
+	localparam CMD_POP     =  1;  // r2 <- [r14] ; r14 += 4
+	localparam CMD_ALU     =  2;  // r2 <- r1 alu_op r0
+	localparam CMD_MOVER   =  3;  // r2 <- r1 + n*4
+	localparam CMD_LOADB   =  4;  // r2 <- [r1 + r0] (byte)
+	localparam CMD_SETBRA  =  5;  // r1 <- cond == true ; pc += cond == true ? offset : 0
+	localparam CMD_LOADL   =  6;  // r2 <- [r1 + r0] (long)
+	localparam CMD_LOADIL  =  7;  // r2 <- [pc] ; pc += 4 (long)
+	localparam CMD_STORB   =  8;  // r2 -> [r1 + r0] (byte)
+	localparam CMD_PUSH    =  9;  // r14 -= 4 ; r2 -> [r14]
+	localparam CMD_STORL   = 10;  // r2 -> [r1 + r0] (long)
 `ifdef COUNTER
-	localparam CMD_MARK    = 11;
+	localparam CMD_MARK    = 11;  // r2 <- counter
 `endif
-	localparam CMD_LOADI   = 12;
-	localparam CMD_JUMP    = 14;
-	localparam CMD_HALT    = 15;
+	localparam CMD_LOADI   = 12;  // r2 <- byte
+	localparam CMD_JUMP    = 14;  // r2 <- pc + 2 ; pc <- r1 + r0
+	localparam CMD_HALT    = 15;  // halt
 
 `ifdef COUNTER
 	always @(posedge clk) begin
@@ -174,35 +169,35 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 		end else
 		case(state)
 			FETCH1	:	begin
-							mem_raddr <= ip;  // ins hi
+							mem_raddr <= ip;  // address of instruction hi byte
 							state <= FETCH2;
 						end
 			FETCH2	:	begin
-							r[0] <= 0;
+							r[0] <= 0;        // make sure fixed registers stay fixed
 							r[1] <= 1;
 							r[13][31] <= 1;   // force the always on bit
 							state <= FETCH3;  // there need to be two clock cycles between loading the mem_raddr and reading mem_data_out
 							r[15] <= ip1;     // but then we can update and read every new clock cycle
-							mem_raddr <= ip1; // ins lo
+							mem_raddr <= ip1; // address of instruction lo byte
 							end
-			FETCH3	:	begin
+			FETCH3	:	begin                 // for efficiency reasons part of the decoding starts here already
 							pop <= 0;
-							instruction[15:8] <= mem_data_out;
+							instruction[15:8] <= mem_data_out;		// instruction hi byte
 							state <= FETCH4;
-							if(mem_data_out[7:4] == CMD_POP) begin
-								mem_raddr <= r[14];
-								pop <= 1;
-							end else begin
-								mem_raddr <= mem_raddr + 1;  // b3
-							end
+							if(mem_data_out[7:4] == CMD_POP) begin  // to keep the read pipeline filled we either
+								mem_raddr <= r[14];                 // start reading from whatever the stack pointer is
+								pop <= 1;                           // then this will point to b3 (hi byte, big endian)
+							end else begin                          // or we keep reading past the instruction 
+								mem_raddr <= mem_raddr + 1;         // in case this will turn out to be a long immediate
+							end                                     // then this will point to b3 (hi byte, big endian)
 						end
 			FETCH4	:	begin
-							instruction[7:0] <= mem_data_out;
-							mem_raddr <= mem_raddr + 1;  // b2
-							r[15] <= ip1;
-							div_go <= 0;
+							instruction[7:0] <= mem_data_out;       // instruction lo byte
+							mem_raddr <= mem_raddr + 1;             // this will point to b2
+							r[15] <= ip1;							// in the decode state ip will point to next instruction
+							div_go <= 0;							// make sure the divider is reset
 							state <= DECODE;
-							div <= 0;
+							div <= 0;								// all decoding signals reset (except for pop)
 							loadb3 <= 0;
 							loadb2 <= 0;
 							loadb1 <= 0;
@@ -216,19 +211,19 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 						end
 			DECODE	:	begin
 							state <= EXEC1;
-							mem_raddr <= mem_raddr + 1; // b1
+							mem_raddr <= mem_raddr + 1;				// this will point to b1
 							case(cmd)
-								CMD_MOVEP:	begin
+								CMD_MOVE:	begin
 												state <= FETCH1;
 												r[R2] <= sumr1r0;
-												if( ~ &R2 ) begin // if R2 is not the PC we can take a 1 cycle shortcut
+												if( ~ &R2 ) begin	// if R2 is not the PC we can take a 1 cycle shortcut
 													mem_raddr <= ip;
 													state <= FETCH2;
 												end
 											end
 								CMD_ALU:	begin
 												if(multicycle) begin 
-													div_go <= 1; // start the divider module if we have a divider operation
+													div_go <= 1;	// start the divider module if we have a divider operation
 													div <= 1;
 												end	else begin
 													r[R2] <= alu_c;
@@ -241,15 +236,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 													end
 												end
 											end
-								CMD_POP:	begin
-												//mem_raddr <= r[14];
-												//loadb3 <= 1;
-												//loadb2 <= 1;
-												//loadb1 <= 1;
-												//loadb0 <= 1;
+								CMD_POP:	begin // empty instruction, pop was already set during fetch
 												pop <= 1;
 											end
-								CMD_MOVER:	begin
+								CMD_MOVER:	begin // OPTIMIZATION: if R2 != PC we can take a shortcut to FETCH2
 												r[R2] <= r1_offset;
 												state <= FETCH1;
 											end
@@ -265,12 +255,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 												mem_raddr <= sumr1r0_addr;
 											end
 								CMD_LOADIL: begin
-												//loadb3 <= 1;
-												//loadb2 <= 1;
-												//loadb1 <= 1;
-												//loadb0 <= 1;
 												loadli <= 1;
-												//mem_raddr <= r[15];
 												r[15] <= ip2;  // we increment the pc in two steps to save on LUTs needed for adder
 											end
 								CMD_STORB:	begin
@@ -320,16 +305,16 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 `endif
 								default: state <= FETCH1;
 							endcase
-							temp[31:24] <= mem_data_out;  // b3
+							temp[31:24] <= mem_data_out;  // read b3 for POP or LOADLI
 						end
 			EXEC1	:	begin
-							temp[23:16] <= mem_data_out; // b2
-							mem_raddr <= mem_raddr + 1;  // b0 
+							temp[23:16] <= mem_data_out; // read b2 for POP or LOADLI
+							mem_raddr <= mem_raddr + 1;  // this will point to b0 or b2
 							div_go <= 0; // flag down the divider module again so that it is not reset forever
 							state <= EXEC2;
 
 							if (div) begin // a divider operation (multiple cycles)
-								if(div_is_available) begin
+								if(div_is_available) begin // keep cycling until done
 									r[R2] <= div_c;
 									r[13][29] <= div_is_zero;
 									r[13][30] <= div_is_negative;
@@ -352,7 +337,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							if(loadli) r[15] <= ip2; // we increment the pc in two steps to save on LUTs needed for adder
 						end
 			EXEC2	:	begin
-							mem_raddr <= mem_raddr + 1;   // the address for loadb1
+							mem_raddr <= mem_raddr + 1;		// the address for b1
 							state <= FETCH1;
 
 							if(loadb3) begin
@@ -377,7 +362,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 							if(pop) r[14] <= r[14] + 4; // no need to set state because has been done by loadli | pop
 						end
 			EXEC3	:	begin
-							mem_raddr <= mem_raddr + 1;  // the address for loadb0
+							mem_raddr <= mem_raddr + 1;  // the address for b0
 							state <= FETCH1;
 
 							if(loadb2) begin
@@ -385,6 +370,7 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC4;
 							end
 
+							// OPTIMIZATION: if R2 != PC we can take a shortcut to FETCH2
 							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24]; // a single byte load, not a long
 
 							if(loadli | pop) begin
