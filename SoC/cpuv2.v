@@ -290,6 +290,10 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								CMD_LOADI:	begin
 												r[R2][7:0] <= immediate;
 												state <= FETCH1;
+												if( ~ &R2 ) begin	// if R2 is not the PC we can take a 1 cycle shortcut
+													mem_raddr <= ip;
+													state <= FETCH2;
+												end
 											end
 								CMD_SETBRA:	begin
 												branch <= 1;
@@ -374,8 +378,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 								state <= EXEC4;
 							end
 
-							// OPTIMIZATION: if R2 != PC we can take a shortcut to FETCH2
 							if(loadb3 & ~loadb2) r[R2][7:0] <= temp[31:24]; // a single byte load, not a long
+							if(loadb3 & ~loadb2 & ~ &R2 ) begin	// if R2 is not the PC we can take a 1 cycle shortcut
+								mem_raddr <= ip;
+								state <= FETCH2;
+							end
 
 							if(loadli | pop) begin
 								mem_raddr <= ip;
