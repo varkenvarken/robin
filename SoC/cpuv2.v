@@ -92,11 +92,11 @@ module cpuv2(clk, mem_data_out, mem_data_in, mem_raddr, mem_waddr, mem_write, me
 	localparam FETCH3		= 2;
 	localparam FETCH4		= 3;
 	localparam DECODE		= 4;
-	localparam EXEC1		= 8;
-	localparam EXEC2		= 9;
-	localparam EXEC3		= 10;
-	localparam EXEC4		= 11;
-	localparam EXEC5		= 12;
+	localparam EXEC1		= 5;
+	localparam EXEC2		= 6;
+	localparam EXEC3		= 7;
+	localparam EXEC4		= 8;
+	localparam EXEC5		= 9;
 	localparam HALT			= 15;
 
 	// instruction pointer
