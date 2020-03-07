@@ -75,8 +75,8 @@ testhard:
 	$(MONITOR) -b115200 -i -x shift_instructions.cmd
 	$(MONITOR) -b115200 -i -x himem.cmd
 
-testspeed: speedtest.bin speedtest.cmd
-	$(MONITOR) -b115200 -i -x speedtest.cmd
+testspeed: speedtest.bin speedtest.cmd speedpretty.py
+	$(MONITOR) -b115200 -i -x speedtest.cmd | $(PYTHON) speedpretty.py
 
 .PHONY: all clean test testhard testspeed
 
