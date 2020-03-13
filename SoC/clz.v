@@ -18,16 +18,12 @@ module clz(
 	wire  [7:0] ai;
 	wire  [15:0] z;
 
-	nlc nlc7(a[31:28], ai[7], z[15:14]);
-	nlc nlc6(a[27:24], ai[6], z[13:12]);
-	nlc nlc5(a[23:20], ai[5], z[11:10]);
-	nlc nlc4(a[19:16], ai[4], z[ 9: 8]);
-	nlc nlc3(a[15:12], ai[3], z[ 7: 6]);
-	nlc nlc2(a[11: 8], ai[2], z[ 5: 4]);
-	nlc nlc1(a[ 7: 4], ai[1], z[ 3: 2]);
-	nlc nlc0(a[ 3: 0], ai[0], z[ 1: 0]);
+	genvar i;
 
-	wire q = &(ai); // true if all nibbles are all zeros
+	for(i=7; i>=0 ; i--) begin
+		nlc nlc(a[i*4+3:i*4], ai[i], z[i*2+1:i*2]);
+	end
+
 	wire [5:0] y;
 
 	assign y = 	ai[7] ? (			// leftmost nibble all zeros?
@@ -37,7 +33,7 @@ module clz(
 				ai[3] ? (
 				ai[2] ? (
 				ai[1] ? (
-				ai[0] ? ( q ? 6'b100000 : 6'b000000
+				ai[0] ? ( 6'b100000
 						) : {4'b0111, z[ 1: 0]}
 						) : {4'b0110, z[ 3: 2]}
 						) : {4'b0101, z[ 5: 4]}
