@@ -34,10 +34,14 @@ module alu(
 	localparam OP_NOT			= 7;
 	localparam OP_CMP			= 8;
 	localparam OP_TEST			= 9;
+	localparam OP_CLZ			= 10;
 	localparam OP_SHIFTLEFT		= 12;
 	localparam OP_SHIFTRIGHT	= 13;
 	localparam OP_MULLO			= 14;
 	localparam OP_MULHI			= 15;
+
+	wire [31:0] nb;
+	clz clz(a, nb);
 
 	wire [31:0] add = a + b;
 	wire [31:0] sub = a - b;
@@ -105,6 +109,7 @@ module alu(
 				op == OP_XOR ? b_xor :
 
 				op == OP_CMP ? cmp :
+				op == OP_CLZ ? nb :
 				(op == OP_TEST | shiftid)? a :
 
 				shiftq  & ~shiftnull & ~shiftid? mult64[31:0] :

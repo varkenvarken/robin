@@ -4,7 +4,7 @@ SIMULATOR = $(PYTHON) ../../bin/simulator.py
 MONITOR = $(PYTHON) ../../bin/monitor.py
 LIB = ../../bin/lib.S
 
-OUTPUT = all_instructions.bin stack_instructions.bin alu_instructions.bin shift_instructions.bin shift_instructions2.bin himem.bin speedtest.bin
+OUTPUT = all_instructions.bin stack_instructions.bin alu_instructions.bin clz_instruction.bin shift_instructions.bin shift_instructions2.bin himem.bin speedtest.bin
 
 STRING = ../string
 
@@ -17,6 +17,9 @@ stack_instructions.bin: $(LIB) stack_instructions.s
 	$(ASSEMBLER) $^ > $@
 
 alu_instructions.bin: $(LIB) alu_instructions.s
+	$(ASSEMBLER) $^ > $@
+
+clz_instruction.bin: $(LIB) clz_instruction.s
 	$(ASSEMBLER) $^ > $@
 
 shift_instructions.bin: $(LIB) shift_instructions.s
@@ -73,6 +76,7 @@ testhard:
 	$(MONITOR) -b115200 -i -x stack_instructions.cmd
 	$(MONITOR) -b115200 -i -x alu_instructions.cmd
 	$(MONITOR) -b115200 -i -x shift_instructions.cmd
+	$(MONITOR) -b115200 -i -x clz_instruction.cmd
 	$(MONITOR) -b115200 -i -x himem.cmd
 
 testspeed: speedtest.bin speedtest.cmd speedpretty.py
