@@ -1,15 +1,3 @@
-module nlc(
-	input  [3:0] x,
-	output       a,		// true if all zero
-	output [1:0] z
-	);
-
-	assign a    = ~|x;
-	assign z[1] = ~(x[3]|x[2]);
-	assign z[0] = ~((~x[2] & x[1]) | x[3]);
-	
-endmodule
-
 module clz(
 	input [31:0] a,
 	output [31:0] c
@@ -21,7 +9,9 @@ module clz(
 	genvar i;
 
 	for(i=7; i>=0 ; i--) begin
-		nlc nlc(a[i*4+3:i*4], ai[i], z[i*2+1:i*2]);
+		assign ai[i    ] = ~|a[i*4+3:i*4];
+		assign  z[i*2+1] = ~(a[i*4+3]|a[i*4+2]);
+		assign  z[i*2  ] = ~((~a[i*4+2] & a[i*4+1]) | a[i*4+3]);
 	end
 
 	wire [5:0] y;
