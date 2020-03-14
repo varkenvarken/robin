@@ -5,6 +5,8 @@ module test;
   wire is_zero, is_negative;
   
   reg [31:0] x,y;
+  reg [63:0] xw,yw,cw;
+
   integer n;
 
   alu dut(a,b,op,c,is_zero,is_negative);   
@@ -284,6 +286,53 @@ module test;
         end
       end
       $display("OP_SHIFTRIGHT  ok");
+
+      for(i=0; i<iterations; i=i+1)  // mullo
+      begin
+        a = $urandom;
+        b = $urandom;
+        op = OP_MULLO;
+        result = a * b;
+        #1; // need to wait a bit to satisfy timing requirements
+        if(c != result) begin
+           $display("%08h * %08h -> %08h, z:%d n:%d (expected: %08h, z:%d n:%d)(result incorrect)", a, b, c, is_zero, is_negative, result, (result)==0, ((result) & 32'h80000000)>>31);
+           $fatal(1);
+        end
+        if((result == 0) != is_zero) begin
+           $display("%08h * %08h -> %08h, z:%d n:%d (expected: %08h, z:%d n:%d)(zero flag incorrect)", a, b, c, is_zero, is_negative, result, (result)==0, ((result) & 32'h80000000)>>31);
+           $fatal(1);
+        end
+        if(((result) & 32'h80000000) >> 31 != is_negative) begin
+           $display("%08h * %08h -> %08h, z:%d n:%d (expected: %08h, z:%d n:%d)(negative flag incorrect)", a, b, c, is_zero, is_negative, result, (result)==0, ((result) & 32'h80000000)>>31);
+           $fatal(1);
+        end
+      end
+      $display("OP_MULLO ok");
+
+      for(i=0; i<iterations; i=i+1)  // mulho
+      begin
+        a = $urandom;
+        b = $urandom;
+        op = OP_MULHI;
+        xw = a;
+        yw = b;
+        cw = a * b;
+        result = cw >> 32;
+        #1; // need to wait a bit to satisfy timing requirements
+        if(c != result) begin
+           $display("%08h * %08h -> %08h, z:%d n:%d (expected: %08h, z:%d n:%d)(result incorrect)", a, b, c, is_zero, is_negative, result, (result)==0, ((result) & 32'h80000000)>>31);
+           $fatal(1);
+        end
+        if((result == 0) != is_zero) begin
+           $display("%08h * %08h -> %08h, z:%d n:%d (expected: %08h, z:%d n:%d)(zero flag incorrect)", a, b, c, is_zero, is_negative, result, (result)==0, ((result) & 32'h80000000)>>31);
+           $fatal(1);
+        end
+        if(((result) & 32'h80000000) >> 31 != is_negative) begin
+           $display("%08h * %08h -> %08h, z:%d n:%d (expected: %08h, z:%d n:%d)(negative flag incorrect)", a, b, c, is_zero, is_negative, result, (result)==0, ((result) & 32'h80000000)>>31);
+           $fatal(1);
+        end
+      end
+      $display("OP_MULHI ok");
 
       $finish(0);
     end
