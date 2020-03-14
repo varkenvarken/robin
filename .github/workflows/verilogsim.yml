@@ -1,0 +1,17 @@
+name: Python files
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: verilog test benches
+      run: |
+        sudo apt-get --yes install iverilog
+        cd SoC/Simulate
+        make clean
+        make
