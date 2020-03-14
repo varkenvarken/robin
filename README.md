@@ -1,7 +1,7 @@
 # robin
 SoC design targeted at the iCEbreaker board
 
-![Python files](https://github.com/varkenvarken/robin/workflows/Python%20files/badge.svg) ![Simulations](https://github.com/varkenvarken/robin/workflows/Simulations/badge.svg) ![Libraries](https://github.com/varkenvarken/robin/workflows/Libraries/badge.svg)
+![Python files](https://github.com/varkenvarken/robin/workflows/Python%20files/badge.svg) ![Simulations](https://github.com/varkenvarken/robin/workflows/Simulations/badge.svg) ![Libraries](https://github.com/varkenvarken/robin/workflows/Libraries/badge.svg) ![Verilog testbenches](https://github.com/varkenvarken/robin/workflows/Verilog%20testbenches/badge.svg)
 
 ## Components
 
@@ -17,7 +17,7 @@ Additionally, the CPU design is being documented on [a separate website](https:/
 
 ## About test results
 
-The badges indicate if the main python files pass pep8, all instructions can be simulated correctly in the simulator and libc examples can be compiled, assembled and simulated with correct results. That does not imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
+The badges indicate whether the main python files pass pep8, all instructions can be simulated correctly in the simulator, libc examples can be compiled, assembled and simulated with correct results and lastly whether the verilog testbenches work. Nothing of this does imply that de hardware works, there are separate testcases for that but I cannot run them on GitHub.
 
 ## Dependencies
 
