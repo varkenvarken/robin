@@ -1,4 +1,4 @@
-name: Python files
+name: Verilog testbenches
 
 on: [push]
 
