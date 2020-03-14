@@ -8,7 +8,7 @@ module clz(
 
 	genvar i;
 
-	for(i=7; i>=0 ; i--) begin
+	for(i=7; i>=0 ; i=i-1) begin
 		assign ai[i    ] = ~|a[i*4+3:i*4];
 		assign  z[i*2+1] = ~(a[i*4+3]|a[i*4+2]);
 		assign  z[i*2  ] = ~((~a[i*4+2] & a[i*4+1]) | a[i*4+3]);
