@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<title>Robin, A risc cpu in verilog targeted at the iCEbreaker board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="icons/css/all.min.css">
+<link rel="stylesheet" href="highlight/styles/atelier-cave-light.css">
+<script src="highlight/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+    
+<div class="w3-sidebar w3-bar-block w3-collapse w3-card w3-animate-right w3-xxlarge" style="width:200px;right:0;" id="mySidebar">
+  <button class="w3-bar-item w3-button w3-large w3-hide-large w3-xxlarge my-hover-purple fas fa-times" onclick="w3_close()"> </button>
+  <a href="https://varkenvarken.github.io/robin/" class="w3-bar-item w3-button my-hover-purple fas fa-home"><span class="tooltiptext">Home page</span></a>
+  <a href="https://github.com/varkenvarken/robin/wiki" class="w3-bar-item w3-button my-hover-purple fas fa-globe"><span class="tooltiptext">Wiki</span></a>
+  <a href="https://fpga.michelanders.nl/" class="w3-bar-item w3-button my-hover-purple fab fa-blogger"><span class="tooltiptext">Blog</span></a>
+  <a href="https://github.com/varkenvarken/robin" class="w3-bar-item w3-button my-hover-purple fab fa-github"><span class="tooltiptext">Code</span></a>
+</div>
+
+<div class="w3-main" style="margin-right:200px">
+<div class="my-purple">
+  <button class="w3-button my-purple w3-xlarge w3-right w3-hide-large" onclick="w3_open()">&#9776;</button>
+  <div class="w3-container">
+    <h1>Robin</h1><h2>A risc cpu in verilog targeted at the iCEbreaker board</h2>
+  </div>
+</div>
+
+<div class="w3-container">
+	<h2>Counting leading zeros</h2>
+	<p>In many scenarios we need a function to calculate the number of leading zeros in a binary number. This plays a role in division (where you might need to shift the first bit in the the divisor to align with the dividend) or in floating point operations where for example multiplication requires mantissas that align in order to get the maximum accuracy.</p>
+	<p>So the code below shows a modular implementation.</p>
+	<pre><code>
+module clz(
+	input [31:0] a,
+	output [31:0] c
+	);
+
+	wire  [7:0] ai;
+	wire  [15:0] z;
+
+	genvar i;
+
+	for(i=7; i>=0 ; i=i-1) begin
+		assign ai[i    ] = ~|a[i*4+3:i*4];
+		assign  z[i*2+1] = ~(a[i*4+3]|a[i*4+2]);
+		assign  z[i*2  ] = ~((~a[i*4+2] & a[i*4+1]) | a[i*4+3]);
+	end
+
+	wire [5:0] y;
+
+	assign y = 	ai[7] ? (	// leftmost nibble all zeros?
+			ai[6] ? (	// 2nd nibble all zeros?
+			ai[5] ? (	// 3rd nibble all zeros?
+			ai[4] ? (
+			ai[3] ? (
+			ai[2] ? (
+			ai[1] ? (
+			ai[0] ? ( 6'b100000              // all 32 bits are zero
+				) : {4'b0111, z[ 1: 0]}
+				) : {4'b0110, z[ 3: 2]}
+				) : {4'b0101, z[ 5: 4]}
+				) : {4'b0100, z[ 7: 6]}
+				) : {4'b0011, z[ 9: 8]}
+				) : {4'b0010, z[11:10]}  // count in 3rd nibble from left
+				) : {4'b0001, z[13:12]}  // count in 2nd nibble from left
+				) : {4'b0000, z[15:14]}; // count in leftmost nibble
+
+	assign c = {26'b0, y};
+endmodule
+
+	</code></pre>
+	<p>The code implements a count leading zeros module with a 32 bit input. The for loop instantiates 8 identical pieces of wiring, each piece addressing a 4 bit nibble in the input. Each <code>ai[]</code> wire signals whether the whole nibble consists of zeros, while each duo of <code>z[]</code> wires counts the leading zeros in the nibble. This count can be 0, 1, 2 or 3 (for all zeros the <code>ai[]</code> wire will be set.)</p>
+	<p>With this information for every nibble available we proceed with what is in essence a kind of priority encoder: we first check the leftmost nibble and if it is not all zeros the count will be <code>z[15:14]</code>, i.e. the count for the leftmost nibble.</p>
+	<p>If the left most nibble <em>is</em> all zeros, then we check the 2nd nibble and if that 2nd nibble contains ones, we return the count in that 2nd nibble (<code>z[13:12]</code>) and prepend 4'b0001, that is, 4, because the first nibble was all zeros. Then we repeat this scheme all the way up to the rightmost nibble.</p>
+	<p>If the rightmost nibble is all zeros too, we return 6'b100000 (32)</p>
+	<h3>Propagation delays</h3>
+	<p>This fully combinatorial implementation works for me on the iCEbreaker at 12 MHz but it is not the fastest implementation possible. The priority encoder contains quite few layers, each with their own delays and with a faster clock this might be too slow. As far as I can tell the longest chain is thru 6 LUTs (as verified with<br />
+	<pre><code>yosys -p "read_verilog clz.v; hierarchy -libdir . ; synth_ice40 -dsp -flatten -json clz.json; show"</code></pre>
+	<br />but I am not sure what this actually means in terms of delays other than that nextpnr is fine with it for the iCEbreaker.</p>
+	<div class="bumper"></div>
+</div>
+
+</div>
+<div class="footer my-purple">
+  <p><span class="nav">
+  <a href="index.html"><i class="far fa-arrow-alt-circle-left"></i></a>
+  <a href="index.html"><i class="far fa-arrow-alt-circle-up"></i></a>
+  <a href="Isa_design_decisions.html"><i class="far fa-arrow-alt-circle-right"></i></a></span>
+  <span class="copyright">&copy; 2020 Michel Anders</span>
+  <span class="nav-secondary">
+  <a href="https://github.com/varkenvarken/robin/wiki"><i class="fas fa-globe"><span class="label">Wiki</span></i></a>
+  <a href="https://fpga.michelanders.nl/"><i class="fab fa-blogger"><span class="label">Blog</span></i></a>
+  <a href="https://github.com/varkenvarken/robin"><i class="fab fa-github"><span class="label">Code</span></i></a>
+  </span>
+  </p>
+</div>
+<script>
+function w3_open() {
+  document.getElementById("mySidebar").style.display = "block";
+}
+
+function w3_close() {
+  document.getElementById("mySidebar").style.display = "none";
+}
+</script>
+   
+</body>
+</html>
