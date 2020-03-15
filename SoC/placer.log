@@ -148,7 +148,7 @@ Info:   at iteration #300: temp = 0.000000, timing cost = 5382, wirelen = 28567
 Info:   at iteration #305: temp = 0.000000, timing cost = 5383, wirelen = 28568
 Info:   at iteration #310: temp = 0.000000, timing cost = 5382, wirelen = 28564
 Info:   at iteration #311: temp = 0.000000, timing cost = 5382, wirelen = 28563 
-Info: SA placement time 104.55s
+Info: SA placement time 98.92s
 
 Info: Max frequency for clock 'CLK$SB_IO_IN_$glb_clk': 13.92 MHz (PASS at 12.00 MHz)
 Info: Clock '$PACKER_GND_NET' has no interior paths
@@ -293,7 +293,7 @@ Info:     102000 |    51482      50517 |  478   522 |       237
 Info:     103000 |    52021      50978 |  539   461 |       140
 Info:     103425 |    52204      51221 |  183   243 |         0
 Info: Routing complete.
-Info: Route time 60.76s
+Info: Route time 57.64s
 Info: Checksum: 0xaa061527
 
 Info: Critical path report for clock 'CLK$SB_IO_IN_$glb_clk' (posedge -> posedge):
