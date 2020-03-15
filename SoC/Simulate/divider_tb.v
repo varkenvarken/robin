@@ -60,7 +60,7 @@ module test;
           #1;
           end
           if((result != c) | (is_zero != (result == 0)) | (is_negative != (((result) & 32'h80000000) >> 31))) begin
-            $display("%08h / %08h = %08h [expected: %08h] (z:%1d [%1d] n:%1d [%1d] clk:%4d)",
+            $display("%08h %% %08h = %08h [expected: %08h] (z:%1d [%1d] n:%1d [%1d] clk:%4d)",
                 a,b,c,result,is_zero,result == 0,is_negative,((result) & 32'h80000000) >> 31,($time-start)/2);
             $fatal(1);
           end
@@ -78,6 +78,23 @@ module test;
           end
           if((sresult != c) | (is_zero != (sresult == 0)) | (is_negative != (((sresult) & 32'h80000000) >> 31))) begin
             $display("%08h / %08h = %08h [expected: %08h] (z:%1d [%1d] n:%1d [%1d] clk:%4d)",
+                a,b,c,sresult,is_zero,sresult == 0,is_negative,((sresult) & 32'h80000000) >> 31,($time-start)/2);
+            $fatal(1);
+          end
+      end
+
+      // signed remainder
+      #1 clk <= 0; reset <= 1;
+      for(i=0; i<iterations; i=i+1)
+      begin
+          #2 go <= 0; start = $time; sa <= $random; sb <= $random;
+          #2 reset <= 0; a <= sa; b <= sb; divs <= 1; remainder <= 1; go <= 1;
+          #2 go <= 0; sresult <= sa % sb;
+          while(~ available) begin
+          #1;
+          end
+          if((sresult != c) | (is_zero != (sresult == 0)) | (is_negative != (((sresult) & 32'h80000000) >> 31))) begin
+            $display("%08h %% %08h = %08h [expected: %08h] (z:%1d [%1d] n:%1d [%1d] clk:%4d)",
                 a,b,c,sresult,is_zero,sresult == 0,is_negative,((sresult) & 32'h80000000) >> 31,($time-start)/2);
             $fatal(1);
           end
