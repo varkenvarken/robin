@@ -13,6 +13,6 @@ divider_tb: ../divider.v divider_tb.v
 	$(VERILOG) -o $@ $^ ; ./$@ | awk "/FATAL/{exit(1)}"
 
 clean:
-	rm *_tb
+	rm -f *_tb
 
 .PHONY: all clean $(OUTPUT)
