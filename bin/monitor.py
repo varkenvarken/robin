@@ -458,6 +458,7 @@ class Monitor(cmd.Cmd):
         """
         self.flush()
         args = line.strip().split()
+        starttime = time()
         if args[0] == '--hex' or args[0] == 'x':
             try:
                 with open(args[1], 'r') as f:
@@ -533,6 +534,7 @@ class Monitor(cmd.Cmd):
                 self.ser.write(send)
                 self.wait(0.1)
                 self.flush(len(send))
+        print("elapsed time %.2f" % (time()-starttime))
         self.ok()
         return False
 
@@ -865,6 +867,8 @@ if __name__ == '__main__':
                 m.cmdloop()
                 break
             except KeyboardInterrupt:
-                pass
+                if readline:
+                    readline.set_history_length(histfile_size)
+                    readline.write_history_file(histfile)
             except ValueError:
                 pass

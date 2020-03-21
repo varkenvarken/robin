@@ -4,7 +4,7 @@ SIMULATOR = $(PYTHON) ../../bin/simulator.py
 MONITOR = $(PYTHON) ../../bin/monitor.py
 LIB = ../../bin/lib.S
 
-OUTPUT = all_instructions.bin stack_instructions.bin alu_instructions.bin clz_instruction.bin shift_instructions.bin shift_instructions2.bin himem.bin speedtest.bin
+OUTPUT = all_instructions.bin stack_instructions.bin alu_instructions.bin clz_instruction.bin shift_instructions.bin shift_instructions2.bin himem.bin speedtest.bin uartspeed.bin
 
 STRING = ../string
 
@@ -32,6 +32,9 @@ himem.bin: $(LIB) himem.s
 	$(ASSEMBLER) -i $^ > $@
 
 speedtest.bin: $(LIB) speedtest.s
+	$(ASSEMBLER) $^ > $@
+
+uartspeed.bin: $(LIB) uartspeed.s
 	$(ASSEMBLER) $^ > $@
 
 clean:
@@ -81,6 +84,9 @@ testhard:
 
 testspeed: speedtest.bin speedtest.cmd speedpretty.py
 	$(MONITOR) -b115200 -i -x speedtest.cmd | $(PYTHON) speedpretty.py
+
+uartspeed: uartspeed.bin
+	$(MONITOR) -b115200 -i -x uartspeed.cmd
 
 .PHONY: all clean test testhard testspeed
 

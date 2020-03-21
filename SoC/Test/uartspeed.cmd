@@ -1,0 +1,2 @@
+file uartspeed.bin
+exit
